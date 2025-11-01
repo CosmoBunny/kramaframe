@@ -7,6 +7,6 @@ description = "A simple, generic, and flexible keyframe animation library for Ru
 repository = "https://github.com/CosmoBunny/kramaframe.git"
 license = "MIT"
 keywords = ["animation", "keyframe", "easing", "tweening", "timeline"]
-categories = ["animation", "game-development"]
+categories = ["multimedia::images", "game-development"]
 
 [dependencies]
