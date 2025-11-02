@@ -99,6 +99,9 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> KeyList<TRES, PRES> 
             .iter_mut()
             .map(|(id, progress)| (id, progress))
     }
+    pub fn get(&self, id: u32) -> Option<&ProgressList<TRES, PRES>> {
+        self.progresses.get(&id)
+    }
     pub fn get_mut(&mut self, id: u32) -> Option<&mut ProgressList<TRES, PRES>> {
         self.progresses.get_mut(&id)
     }

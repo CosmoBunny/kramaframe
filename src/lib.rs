@@ -134,9 +134,9 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     ///
     /// Returns `0.0` if the class name or id is not found.
     /// Note: This is the raw progress, not yet modified by a `KeyFrameFunction`.
-    pub fn get_progress_f32(&mut self, classname: &'static str, id: u32) -> f32 {
-        if let Some(keylist) = self.framelist.get_mut(classname) {
-            if let Some(progresslist) = keylist.get_mut(id) {
+    pub fn get_progress_f32(&self, classname: &'static str, id: u32) -> f32 {
+        if let Some(keylist) = self.framelist.get(classname) {
+            if let Some(progresslist) = keylist.get(id) {
                 progresslist.get_progress_f32()
             } else {
                 0.0
@@ -149,9 +149,9 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     /// Gets the current elapsed time of a specific animation instance in seconds.
     ///
     /// Returns `0.0` if the class name or id is not found.
-    pub fn get_time_f32(&mut self, classname: &'static str, id: u32) -> f32 {
-        if let Some(keylist) = self.framelist.get_mut(classname) {
-            if let Some(progresslist) = keylist.get_mut(id) {
+    pub fn get_time_f32(&self, classname: &'static str, id: u32) -> f32 {
+        if let Some(keylist) = self.framelist.get(classname) {
+            if let Some(progresslist) = keylist.get(id) {
                 progresslist.get_time_f32()
             } else {
                 0.0
@@ -167,18 +167,13 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     /// This method is suitable for types that support the necessary arithmetic operations (`Add`, `Sub`, `Mul<f32>`).
     ///
     /// Returns the `range.start` value if the class name or id is not found.
-    pub fn get_value_byrange<T>(
-        &mut self,
-        on_classname: &'static str,
-        id: u32,
-        range: Range<T>,
-    ) -> T
+    pub fn get_value_byrange<T>(&self, on_classname: &'static str, id: u32, range: Range<T>) -> T
     where
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
     {
         if let Some(keyframe) = self.classlist.get(on_classname) {
-            if let Some(keylist) = self.framelist.get_mut(on_classname) {
-                if let Some(progresslist) = keylist.get_mut(id) {
+            if let Some(keylist) = self.framelist.get(on_classname) {
+                if let Some(progresslist) = keylist.get(id) {
                     progresslist.get_value_byrange(range, keyframe)
                 } else {
                     range.start
@@ -198,7 +193,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     ///
     /// Returns the `range.start()` value if the class name or id is not found.
     pub fn get_value_byrange_inclusive<T>(
-        &mut self,
+        &self,
         on_classname: &'static str,
         id: u32,
         range: RangeInclusive<T>,
@@ -208,39 +203,8 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
     {
         if let Some(keyframe) = self.classlist.get(on_classname) {
-            if let Some(keylist) = self.framelist.get_mut(on_classname) {
-                if let Some(progresslist) = keylist.get_mut(id) {
-                    progresslist.get_value_byrangeinclusive(range, keyframe)
-                } else {
-                    range.start().clone()
-                }
-            } else {
-                range.start().clone()
-            }
-        } else {
-            range.start().clone()
-        }
-    }
-
-    /// Calculates and returns an interpolated value within a `RangeInclusive` for types that implement `Copy`.
-    ///
-    /// This is a more generic version of `get_value_byrange_inclusive`, but relies on the
-    /// underlying `ProgressList`'s implementation of `GetValueByRange<T>`.
-    ///
-    /// Returns the `range.start()` value if the class name or id is not found.
-    pub fn get_generic_value_by_range<T>(
-        &mut self,
-        on_classname: &'static str,
-        id: u32,
-        range: RangeInclusive<T>,
-    ) -> T
-    where
-        T: Copy,
-        crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
-    {
-        if let Some(keyframe) = self.classlist.get(on_classname) {
-            if let Some(keylist) = self.framelist.get_mut(on_classname) {
-                if let Some(progresslist) = keylist.get_mut(id) {
+            if let Some(keylist) = self.framelist.get(on_classname) {
+                if let Some(progresslist) = keylist.get(id) {
                     progresslist.get_value_byrangeinclusive(range, keyframe)
                 } else {
                     range.start().clone()
@@ -259,19 +223,14 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     /// It relies on the `GetValueByGeneric` trait to determine the value based on progress.
     ///
     /// Returns `range.start` if the class name or id is not found.
-    pub fn get_generic_byrange<T>(
-        &mut self,
-        on_classname: &'static str,
-        id: u32,
-        range: Range<T>,
-    ) -> T
+    pub fn get_generic_byrange<T>(&self, on_classname: &'static str, id: u32, range: Range<T>) -> T
     where
         T: Copy,
         crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
     {
         if let Some(keyframe) = self.classlist.get(on_classname) {
-            if let Some(keylist) = self.framelist.get_mut(on_classname) {
-                if let Some(progresslist) = keylist.get_mut(id) {
+            if let Some(keylist) = self.framelist.get(on_classname) {
+                if let Some(progresslist) = keylist.get(id) {
                     progresslist.get_generic_byrange(range, keyframe)
                 } else {
                     range.start
@@ -291,7 +250,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
     ///
     /// Returns `range.start()` if the class name or id is not found.
     pub fn get_generic_value_by_rangeinclusive<T>(
-        &mut self,
+        &self,
         on_classname: &'static str,
         id: u32,
         range: RangeInclusive<T>,
@@ -301,8 +260,8 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
     {
         if let Some(keyframe) = self.classlist.get(on_classname) {
-            if let Some(keylist) = self.framelist.get_mut(on_classname) {
-                if let Some(progresslist) = keylist.get_mut(id) {
+            if let Some(keylist) = self.framelist.get(on_classname) {
+                if let Some(progresslist) = keylist.get(id) {
                     progresslist.get_generic_byrangeinclusive(range, keyframe)
                 } else {
                     range.start().clone()
