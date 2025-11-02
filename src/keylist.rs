@@ -5,6 +5,45 @@ use std::{
 
 use crate::keyframe::KeyFrameFunction;
 
+macro_rules! interpolate_range_common {
+    // simple Range<T>
+    ($self_val:expr, $range_val:expr, $t_val:expr) => {{
+        let range_length = $range_val.end - $range_val.start;
+        if $self_val.is_reverse() {
+            $range_val.end - range_length * $t_val
+        } else {
+            $range_val.start + range_length * $t_val
+        }
+    }};
+    // simple RangeInclusive<T>
+    ($self_val:expr, =, $range_val:expr, $t_val:expr) => {{
+        let range_length = *($range_val.end()) - *($range_val.start());
+        if $self_val.is_reverse() {
+            *$range_val.end() - range_length * $t_val
+        } else {
+            *$range_val.start() + range_length * $t_val
+        }
+    }};
+    // simple Range<T> with `as $t conversion`
+    ($self_val:expr, $range_val:expr, $t_val:expr, as $t:ty) => {{
+        let range_length = $range_val.end - $range_val.start;
+        if $self_val.is_reverse() {
+            $range_val.end - (range_length as f32 * $t_val) as $t
+        } else {
+            $range_val.start + (range_length as f32 * $t_val) as $t
+        }
+    }};
+    // simple RangeInclusive<T>
+    ($self_val:expr, =, $range_val:expr, $t_val:expr, as $t:ty) => {{
+        let range_length = $range_val.end() - $range_val.start();
+        if $self_val.is_reverse() {
+            *$range_val.end() - (range_length as f32 * $t_val) as $t
+        } else {
+            *$range_val.start() + (range_length as f32 * $t_val) as $t
+        }
+    }};
+}
+
 /**
 List of Progress is stored by ID. Each specific ID has a specific timing and different progress.
 
@@ -138,6 +177,10 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> ProgressList<TRES, P
     pub fn reverse(&mut self) {
         self.progress.reverse();
     }
+    pub fn reverse_start(&mut self) {
+        self.progress = PRES::max();
+        self.reverse();
+    }
     pub fn restart(&mut self) {
         self.progress.restart();
     }
@@ -187,6 +230,15 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> ProgressList<TRES, P
             }
         }
     }
+
+    fn progress_for_x(&self, progress: f32) -> f32 {
+        let x = if self.is_reverse() {
+            1.0 - progress.abs()
+        } else {
+            progress.abs()
+        };
+        x
+    }
 }
 
 pub trait GetValueByGeneric<T> {
@@ -207,37 +259,54 @@ where
         let range_length = range.end - range.start;
         let progress = self.progress.to_f32();
         match keyframe {
+            // Reverse and forward are the same.
             KeyFrameFunction::Linear => range.start + range_length * progress.abs(),
             KeyFrameFunction::Ease => {
-                // Standard ease, equivalent to cubic-bezier(0.25, 0.1, 0.25, 1.0)
-                let eased_progress = cubic_bezier_y(progress.abs(), 0.25, 0.1, 0.25, 1.0);
-                range.start + range_length * eased_progress
+                let x = if self.is_reverse() {
+                    1.0 - progress.abs()
+                } else {
+                    progress.abs()
+                };
+
+                let eased_progress = cubic_bezier_y(x, 0.25, 0.1, 0.25, 1.0);
+                interpolate_range_common!(self, range, eased_progress)
             }
-            KeyFrameFunction::EaseIn => range.start + range_length * progress.abs().powf(2.0),
+            KeyFrameFunction::EaseIn => {
+                let x = self.progress_for_x(progress);
+
+                let eased_progress = cubic_bezier_y(x, 0.42, 0.0, 1.0, 1.0);
+                interpolate_range_common!(self, range, eased_progress)
+            }
             KeyFrameFunction::EaseOut => {
-                range.start + range_length * (1.0 - (1.0 - progress.abs()).powf(2.0))
+                let x = self.progress_for_x(progress);
+
+                let eased_progress = cubic_bezier_y(x, 0.0, 0.0, 0.58, 1.0);
+                interpolate_range_common!(self, range, eased_progress)
             }
             KeyFrameFunction::EaseInOut => {
-                range.start
-                    + range_length
-                        * (3.0 * progress.abs().powf(2.0) - 2.0 * progress.abs().powf(3.0))
+                let x = self.progress_for_x(progress);
+
+                let eased_progress = cubic_bezier_y(x, 0.42, 0.0, 1.0, 1.0);
+                interpolate_range_common!(self, range, eased_progress)
             }
             KeyFrameFunction::CubicBezier(parameter) => {
+                let x = self.progress_for_x(progress);
                 let [x1, y1, x2, y2] = parameter.map(|x| x as f32 / 10000.);
-                let cubic_bezier = cubic_bezier_y(progress.abs(), x1, y1, x2, y2);
-                range.start + range_length * cubic_bezier
+                let cubic_bezier = cubic_bezier_y(x, x1, y1, x2, y2);
+                interpolate_range_common!(self, range, cubic_bezier)
             }
             KeyFrameFunction::Quadratic => {
-                let quadratic = progress.abs() * progress.abs();
-                range.start + range_length * quadratic
+                let x = self.progress_for_x(progress);
+                let quadratic = x.abs() * x.abs();
+                interpolate_range_common!(self, range, quadratic)
             }
             KeyFrameFunction::Steps(step) => {
+                let x = self.progress_for_x(progress);
                 let step = (*step as f32).max(1.0);
-                let progress = progress.abs();
 
-                let stepped_progress = ((progress * step).floor() / step).min(1.0);
+                let stepped_progress = ((x * step).floor() / step).min(1.0);
 
-                range.start + range_length * stepped_progress
+                interpolate_range_common!(self, range, stepped_progress)
             }
         }
     }
@@ -252,35 +321,42 @@ where
         match keyframe {
             KeyFrameFunction::Linear => *range.start() + range_length * progress.abs(),
             KeyFrameFunction::Ease => {
-                // Standard ease, equivalent to cubic-bezier(0.25, 0.1, 0.25, 1.0)
-                let eased_progress = cubic_bezier_y(progress.abs(), 0.25, 0.1, 0.25, 1.0);
-                *range.start() + range_length * eased_progress
+                let x = self.progress_for_x(progress);
+                let eased_progress = cubic_bezier_y(x.abs(), 0.25, 0.1, 0.25, 1.0);
+                interpolate_range_common!(self, =, range, eased_progress)
             }
-            KeyFrameFunction::EaseIn => *range.start() + range_length * progress.abs().powf(2.0),
+            KeyFrameFunction::EaseIn => {
+                let x = self.progress_for_x(progress);
+                let eased_progress = cubic_bezier_y(x.abs(), 0.42, 0.0, 1.0, 1.0);
+                interpolate_range_common!(self, =, range, eased_progress)
+            }
             KeyFrameFunction::EaseOut => {
-                *range.start() + range_length * (1.0 - (1.0 - progress.abs()).powf(2.0))
+                let x = self.progress_for_x(progress);
+                let eased_progress = cubic_bezier_y(x.abs(), 0.0, 0.0, 0.58, 1.0);
+                interpolate_range_common!(self, =, range, eased_progress)
             }
             KeyFrameFunction::EaseInOut => {
-                *range.start()
-                    + range_length
-                        * (3.0 * progress.abs().powf(2.0) - 2.0 * progress.abs().powf(3.0))
+                let x = self.progress_for_x(progress);
+                let eased_progress = cubic_bezier_y(x.abs(), 0.25, 0.1, 0.25, 1.0);
+                interpolate_range_common!(self, =, range, eased_progress)
             }
             KeyFrameFunction::CubicBezier(parameter) => {
+                let x = self.progress_for_x(progress);
                 let [x1, y1, x2, y2] = parameter.map(|x| x as f32 / 10000.);
-                let cubic_bezier = cubic_bezier_y(progress.abs(), x1, y1, x2, y2);
-                *range.start() + range_length * cubic_bezier
+                let cubic_bezier = cubic_bezier_y(x, x1, y1, x2, y2);
+                interpolate_range_common!(self, =, range, cubic_bezier)
             }
             KeyFrameFunction::Quadratic => {
-                let quadratic = progress.abs() * progress.abs();
-                *range.start() + range_length * quadratic
+                let x = self.progress_for_x(progress);
+                let quadratic = x.abs() * x.abs();
+                interpolate_range_common!(self, =, range, quadratic)
             }
             KeyFrameFunction::Steps(step) => {
                 let step = (*step as f32).max(1.0);
-                let progress = progress.abs();
+                let x = self.progress_for_x(progress);
+                let stepped_progress = ((x * step).floor() / step).min(1.0);
 
-                let stepped_progress = ((progress * step).floor() / step).min(1.0);
-
-                *range.start() + range_length * stepped_progress
+                interpolate_range_common!(self, =, range, stepped_progress)
             }
         }
     }
@@ -308,39 +384,43 @@ macro_rules! impl_get_value_by_range {
                         range.start + ((range_length as f32) * progress.abs()) as $t
                     }
                     KeyFrameFunction::Ease => {
-                        let eased_progress = cubic_bezier_y(progress.abs(), 0.25, 0.1, 0.25, 1.0);
-                        range.start + (range_length as f32 * eased_progress) as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.25, 0.1, 0.25, 1.0);
+                        interpolate_range_common!(self, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseIn => {
-                        range.start + ((range_length as f32) * progress.abs().powf(2.0)) as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.42, 0.0, 1.0, 1.0);
+                        interpolate_range_common!(self, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseOut => {
-                        range.start
-                            + ((range_length as f32) * (1.0 - (1.0 - progress.abs()).powf(2.0)))
-                                as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.0, 0.0, 0.58, 1.0);
+                        interpolate_range_common!(self, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseInOut => {
-                        range.start
-                            + ((range_length as f32)
-                                * (3.0 * progress.abs().powf(2.0) - 2.0 * progress.abs().powf(3.0)))
-                                as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.42, 0.0, 0.58, 1.0);
+                        interpolate_range_common!(self, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::CubicBezier(parameter) => {
+                        let x = self.progress_for_x(progress);
                         let [x1, y1, x2, y2] = parameter.map(|x| x as f32 / 10000.);
-                        let cubic_bezier = cubic_bezier_y(progress.abs(), x1, y1, x2, y2);
-                        range.start + ((range_length as f32) * cubic_bezier) as $t
+                        let cubic_bezier = cubic_bezier_y(x.abs(), x1, y1, x2, y2);
+                        interpolate_range_common!(self, range, cubic_bezier, as $t)
                     }
                     KeyFrameFunction::Quadratic => {
-                        let quadratic = progress.abs() * progress.abs();
-                        range.start + (range_length as f32 * quadratic) as $t
+                        let x = self.progress_for_x(progress);
+                        let quadratic = x.abs() * x.abs();
+                        interpolate_range_common!(self, range, quadratic, as $t)
                     }
                     KeyFrameFunction::Steps(step) => {
                         let step = (*step as f32).max(1.0);
-                        let progress = progress.abs();
+                        let x = self.progress_for_x(progress);
 
-                        let stepped_progress = ((progress * step).floor() / step).min(1.0);
+                        let stepped_progress = ((x * step).floor() / step).min(1.0);
 
-                        range.start + (range_length as f32 * stepped_progress) as $t
+                        interpolate_range_common!(self, range, stepped_progress, as $t)
                     }
                 }
             }
@@ -356,39 +436,43 @@ macro_rules! impl_get_value_by_range {
                         *range.start() + ((range_length as f32) * progress.abs()) as $t
                     }
                     KeyFrameFunction::Ease => {
-                        let eased_progress = cubic_bezier_y(progress.abs(), 0.25, 0.1, 0.25, 1.0);
-                        *range.start() + (range_length as f32 * eased_progress) as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.25, 0.1, 0.25, 1.0);
+                        interpolate_range_common!(self, =, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseIn => {
-                        *range.start() + ((range_length as f32) * progress.abs().powf(2.0)) as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.42, 0.0, 1.0, 1.0);
+                        interpolate_range_common!(self, =, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseOut => {
-                        *range.start()
-                            + ((range_length as f32) * (1.0 - (1.0 - progress.abs()).powf(2.0)))
-                                as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.0, 0.0, 0.58, 1.0);
+                        interpolate_range_common!(self, =, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::EaseInOut => {
-                        *range.start()
-                            + ((range_length as f32)
-                                * (3.0 * progress.abs().powf(2.0) - 2.0 * progress.abs().powf(3.0)))
-                                as $t
+                        let x = self.progress_for_x(progress);
+                        let eased_progress = cubic_bezier_y(x.abs(), 0.42, 0.0, 0.58, 1.0);
+                        interpolate_range_common!(self, =, range, eased_progress, as $t)
                     }
                     KeyFrameFunction::CubicBezier(parameter) => {
+                        let x = self.progress_for_x(progress);
                         let [x1, y1, x2, y2] = parameter.map(|x| x as f32 / 10000.);
-                        let cubic_bezier = cubic_bezier_y(progress.abs(), x1, y1, x2, y2);
-                        range.start() + ((range_length as f32) * cubic_bezier) as $t
+                        let cubic_bezier = cubic_bezier_y(x.abs(), x1, y1, x2, y2);
+                        interpolate_range_common!(self, =, range, cubic_bezier, as $t)
                     }
                     KeyFrameFunction::Quadratic => {
-                        let quadratic = progress.abs() * progress.abs();
-                        *range.start() + (range_length as f32 * quadratic) as $t
+                        let x = self.progress_for_x(progress);
+                        let quadratic = x.abs() * x.abs();
+                        interpolate_range_common!(self, =, range, quadratic, as $t)
                     }
                     KeyFrameFunction::Steps(step) => {
+                        let x = self.progress_for_x(progress);
                         let step = (*step as f32).max(1.0);
-                        let progress = progress.abs();
 
-                        let stepped_progress = ((progress * step).floor() / step).min(1.0);
+                        let stepped_progress = ((x * step).floor() / step).min(1.0);
 
-                        *range.start() + (range_length as f32 * stepped_progress) as $t
+                        interpolate_range_common!(self, =, range, stepped_progress, as $t)
                     }
                 }
             }
@@ -552,7 +636,7 @@ impl ProgressResolution for f32 {
         value
     }
     fn is_reverse(&self) -> bool {
-        (-1f32..=0f32).contains(self)
+        *self < 0.0 && *self >= -1.0
     }
     fn zero() -> Self {
         0.0
@@ -575,13 +659,17 @@ macro_rules! impl_progress_resolution {
                 *self = <$t>::MIN;
             }
             fn is_reverse(&self) -> bool {
-                (<$t>::MIN..=0).contains(self)
+                ({ <$t>::MIN + 1 }..0).contains(self)
             }
             fn start_signal(&self) -> bool {
                 *self == <$t>::MIN
             }
             fn to_f32(&self) -> f32 {
-                *self as f32 / <$t>::MAX as f32
+                if *self == Self::MIN {
+                    0.0
+                } else {
+                    *self as f32 / <$t>::MAX as f32
+                }
             }
             fn from_f32(value: f32) -> Self {
                 (value * <$t>::MAX as f32).round() as $t
@@ -594,6 +682,25 @@ macro_rules! impl_progress_resolution {
             }
         }
     };
+}
+
+#[test]
+fn test_progress_resolution() {
+    assert_eq!(i8::MIN, -128);
+    assert_eq!(i8::MAX, 127);
+    assert_eq!(i16::MIN, -32768);
+    assert_eq!(i16::MAX, 32767);
+    assert_eq!(i32::MIN, -2147483648);
+    assert_eq!(i32::MAX, 2147483647);
+    assert_eq!(i64::MIN, -9223372036854775808);
+    assert_eq!(i64::MAX, 9223372036854775807);
+}
+
+#[test]
+fn test_reverse() {
+    assert_eq!(true, (-505i32).is_reverse());
+    assert_eq!(false, (-128i8).is_reverse());
+    assert_eq!(false, (123i8).is_reverse());
 }
 
 impl_progress_resolution!(i8);

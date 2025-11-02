@@ -25,7 +25,7 @@ A simple, generic, and flexible keyframe animation library for Rust.
 Add `kramaframe` to your project's `Cargo.toml`:
 ```toml
 [dependencies]
-kramaframe = "0.1.0" # Replace with the latest version
+kramaframe = "0.1.2"
 ```
 
 Or, add it via the command line:
@@ -137,6 +137,7 @@ You can find more detailed examples in the `/examples` directory of the reposito
 
 *   `iterrange.rs`: A complete, runnable version of the basic usage example.
 *   `allkeyframe.rs`: Demonstrates and visualizes all available `KeyFrameFunction` types.
+*   `reverse.rs`: Demonstrates how to reverse the direction of an animation instance.
 
 ## License
 

@@ -1,5 +1,3 @@
-// # Warning: Some KeyFrameFunction is not implemented yet. But basic functions are implemented like Linear, EaseIn, EaseOut and EaseInOut.
-
 use kramaframe::{
     BTframelist, KramaFrame,
     keyframe::KeyFrameFunction,

@@ -1,6 +1,6 @@
 use std::{
     collections::BTreeMap,
-    ops::{Add, Mul, Range, RangeInclusive, Sub},
+    ops::{Range, RangeInclusive},
 };
 
 use crate::{
@@ -199,7 +199,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         range: RangeInclusive<T>,
     ) -> T
     where
-        T: Sized + Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy,
+        T: Clone,
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
     {
         if let Some(keyframe) = self.classlist.get(on_classname) {
@@ -281,6 +281,17 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         if let Some(keylist) = self.framelist.get_mut(on_classname) {
             if let Some(progresslist) = keylist.get_mut(id) {
                 progresslist.reverse();
+            }
+        }
+    }
+
+    /// Reverses the direction of a specific animation instance and starts it.
+    ///
+    /// If it was playing forwards, it will now play backwards, and vice-versa.
+    pub fn reverse_start(&mut self, on_classname: &'static str, id: u32) {
+        if let Some(keylist) = self.framelist.get_mut(on_classname) {
+            if let Some(progresslist) = keylist.get_mut(id) {
+                progresslist.reverse_start();
             }
         }
     }
