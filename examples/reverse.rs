@@ -12,7 +12,7 @@ fn main() {
         ("ease", KeyFrameFunction::Ease),
         (
             "cubic",
-            KeyFrameFunction::new_cubic_bezier_f32(0., 0.5, 1., -0.35),
+            KeyFrameFunction::new_cubic_bezier_f32(0.85, 0., 0.50, 1.5),
         ),
     ]);
 
@@ -60,7 +60,7 @@ fn main() {
     kramaframe.reverse_animate("cubic", 1);
     for _ in 0..=62 {
         kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
-        let cubic = kramaframe.get_value_byrange("cubic", 1, 0..90u32);
+        let cubic = kramaframe.get_value_byrange("cubic", 1, 0..90u8);
         println!("cubic : {} : {}", cubic, "█".repeat(cubic as usize));
     }
 
@@ -80,7 +80,7 @@ fn main() {
     kramaframe.reverse_start("cubic", 1);
     for _ in 0..=62 {
         kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
-        let cubic = kramaframe.get_value_byrange("cubic", 1, 0..90u32);
+        let cubic = kramaframe.get_value_byrange("cubic", 1, 0..90u8);
         println!("cubic : {} : {}", cubic, "█".repeat(cubic as usize));
     }
 }
