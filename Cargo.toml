@@ -1,6 +1,6 @@
 [package]
 name = "kramaframe"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 readme = "README.md"
 description = "A simple, generic, and flexible keyframe animation library for Rust."
