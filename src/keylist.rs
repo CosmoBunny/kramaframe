@@ -38,13 +38,13 @@ macro_rules! interpolate_range_common {
             if range_reverse {
                 $range_val.end + (range_length as f32 * $t_val) as $t
             } else {
-                $range_val.start + (range_length as f32 * $t_val) as $t
+                $range_val.end - (range_length as f32 * $t_val) as $t
             }
         } else {
             if range_reverse {
                 $range_val.start - (range_length as f32 * $t_val) as $t
             } else {
-                $range_val.end - (range_length as f32 * $t_val) as $t
+                $range_val.start + (range_length as f32 * $t_val) as $t
             }
         }
     }};
@@ -60,13 +60,13 @@ macro_rules! interpolate_range_common {
             if range_reverse {
                 *$range_val.end() + (range_length as f32 * $t_val) as $t
             } else {
-                *$range_val.start() + (range_length as f32 * $t_val) as $t
+                *$range_val.start() - (range_length as f32 * $t_val) as $t
             }
         } else {
             if range_reverse {
                 *$range_val.start() - (range_length as f32 * $t_val) as $t
             } else {
-                *$range_val.end() - (range_length as f32 * $t_val) as $t
+                *$range_val.start() + (range_length as f32 * $t_val) as $t
             }
         }
     }};
