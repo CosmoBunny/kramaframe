@@ -216,13 +216,60 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
             range.start().clone()
         }
     }
+    /**
+     Gets a value from a `Range` based on animation progress, for generic types.
 
-    /// Gets a value from a `Range` based on animation progress, for generic types.
-    ///
-    /// This method is intended for types that might not support arithmetic interpolation (e.g., enums).
-    /// It relies on the `GetValueByGeneric` trait to determine the value based on progress.
-    ///
-    /// Returns `range.start` if the class name or id is not found.
+     This method is intended for types that might not support arithmetic interpolation (e.g., enums).
+     It relies on the `GetValueByGeneric` trait to determine the value based on progress.
+
+     NOTE: Generic should be implemented with
+     - Clone, Copy
+     - Add<Output = Self>, Sub<Output = Self>
+     - Mul<f32, Output = Self>
+
+     ## Example of implementation
+     ```rust
+        #[derive(Clone, Copy)]
+        struct Point {
+            x: f32,
+            y: f32,
+        }
+
+        impl Add for Point {
+            type Output = Self;
+
+            fn add(self, other: Self) -> Self {
+                Point {
+                    x: self.x + other.x,
+                    y: self.y + other.y,
+                }
+            }
+        }
+
+        impl Sub for Point {
+            type Output = Self;
+
+            fn sub(self, other: Self) -> Self {
+                Point {
+                    x: self.x - other.x,
+                    y: self.y - other.y,
+                }
+            }
+        }
+
+        impl Mul<f32> for Point {
+            type Output = Self;
+
+            fn mul(self, scalar: f32) -> Self {
+                Point {
+                    x: self.x * scalar,
+                    y: self.y * scalar,
+                }
+            }
+        }
+     ```
+     Returns `range.start` if the class name or id is not found.
+    */
     pub fn get_generic_byrange<T>(&self, on_classname: &'static str, id: u32, range: Range<T>) -> T
     where
         T: Copy,
@@ -243,12 +290,60 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         }
     }
 
-    /// Gets a value from a `RangeInclusive` based on animation progress, for generic types.
-    ///
-    /// This method is intended for types that might not support arithmetic interpolation (e.g., enums).
-    /// It relies on the `GetValueByGeneric` trait to determine the value based on progress.
-    ///
-    /// Returns `range.start()` if the class name or id is not found.
+    /**
+     Gets a value from a `RangeInclusive` based on animation progress, for generic types.
+
+     This method is intended for types that might not support arithmetic interpolation (e.g., enums).
+     It relies on the `GetValueByGeneric` trait to determine the value based on progress.
+
+     NOTE: Generic should be implemented with
+     - Clone, Copy
+     - Add<Output = Self>, Sub<Output = Self>
+     - Mul<f32, Output = Self>
+
+     ## Example of implementation
+     ```rust
+        #[derive(Clone, Copy)]
+        struct Point {
+            x: f32,
+            y: f32,
+        }
+
+        impl Add for Point {
+            type Output = Self;
+
+            fn add(self, other: Self) -> Self {
+                Point {
+                    x: self.x + other.x,
+                    y: self.y + other.y,
+                }
+            }
+        }
+
+        impl Sub for Point {
+            type Output = Self;
+
+            fn sub(self, other: Self) -> Self {
+                Point {
+                    x: self.x - other.x,
+                    y: self.y - other.y,
+                }
+            }
+        }
+
+        impl Mul<f32> for Point {
+            type Output = Self;
+
+            fn mul(self, scalar: f32) -> Self {
+                Point {
+                    x: self.x * scalar,
+                    y: self.y * scalar,
+                }
+            }
+        }
+     ```
+     Returns `range.start` if the class name or id is not found.
+    */
     pub fn get_generic_value_by_rangeinclusive<T>(
         &self,
         on_classname: &'static str,
@@ -293,6 +388,21 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
             if let Some(progresslist) = keylist.get_mut(id) {
                 progresslist.reverse_start();
             }
+        }
+    }
+
+    /// Checks if a specific animation instance is currently playing.
+    ///
+    /// Returns `true` if the animation is playing, `false` otherwise.
+    pub fn is_animating(&self, on_classname: &'static str, id: u32) -> bool {
+        if let Some(keylist) = self.framelist.get(on_classname) {
+            if let Some(progresslist) = keylist.get(id) {
+                progresslist.is_animating()
+            } else {
+                false
+            }
+        } else {
+            false
         }
     }
 

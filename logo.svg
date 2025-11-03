@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="159.82268mm"
+   height="23.660469mm"
+   viewBox="0 0 159.82268 23.660469"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   sodipodi:docname="logo.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.78126746"
+     inkscape:cx="313.59299"
+     inkscape:cy="0"
+     inkscape:window-width="1360"
+     inkscape:window-height="731"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient5"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#1361d7;stop-opacity:1;"
+         offset="0.36054581"
+         id="stop5" />
+      <stop
+         style="stop-color:#cf61d7;stop-opacity:1;"
+         offset="1"
+         id="stop6" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#1361d7;stop-opacity:1;"
+         offset="0.31645155"
+         id="stop3" />
+      <stop
+         style="stop-color:#13e9d7;stop-opacity:1;"
+         offset="1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3"
+       id="linearGradient4"
+       x1="36.603344"
+       y1="130.79391"
+       x2="52.644821"
+       y2="130.79391"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-0.354825)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5"
+       id="linearGradient6"
+       x1="36.231575"
+       y1="122.10561"
+       x2="50.34853"
+       y2="122.10561"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-33.642344,-112.94798)">
+    <path
+       style="fill:none;fill-opacity:1;stroke:#1361d7;stroke-width:2.961;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       d="m 35.122844,112.94798 v 23.66047"
+       id="path1"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:url(#linearGradient4);stroke-width:2.961;stroke-linejoin:miter;stroke-dasharray:none"
+       d="m 36.248519,126.45989 c 8.75162,0 12.619512,1.4805 12.619512,10.14856"
+       id="path3"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:url(#linearGradient6);stroke-width:2.961;stroke-linejoin:miter;stroke-dasharray:none"
+       d="m 36.248519,126.45989 3.529934,-0.0404 v -3.61819 h 4.147672 v -4.23592 h 4.941906 v -5.6174"
+       id="path2"
+       sodipodi:nodetypes="ccccccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:25.4px;font-family:'Allerta Stencil';-inkscape-font-specification:'Allerta Stencil';text-align:center;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#137ed7;fill-opacity:1;stroke:none;stroke-width:2.961;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       x="123.75145"
+       y="136.48442"
+       id="text6"><tspan
+         sodipodi:role="line"
+         id="tspan6"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Allerta Stencil';-inkscape-font-specification:'Allerta Stencil';fill:#137ed7;fill-opacity:1;stroke:none;stroke-width:2.961"
+         x="123.75145"
+         y="136.48442">ramaFrame</tspan></text>
+  </g>
+</svg>

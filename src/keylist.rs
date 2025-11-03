@@ -24,13 +24,23 @@ macro_rules! interpolate_range_common {
             *$range_val.start() + range_length * $t_val
         }
     }};
+    // for u8, u16, u32, u64, u128, i8, i16, i32, i64, i128
     // simple Range<T> with `as $t conversion`
     ($self_val:expr, $range_val:expr, $t_val:expr, as $t:ty) => {{
         let range_length = $range_val.end - $range_val.start;
+        let range_reverse = $range_val.end < $range_val.start;
         if $self_val.is_reverse() {
-            $range_val.end - (range_length as f32 * $t_val) as $t
+            if range_reverse {
+                $range_val.start + (range_length as f32 * $t_val) as $t
+            } else {
+                $range_val.end - (range_length as f32 * $t_val) as $t
+            }
         } else {
-            $range_val.start + (range_length as f32 * $t_val) as $t
+            if range_reverse {
+                $range_val.end - (range_length as f32 * $t_val) as $t
+            } else {
+                $range_val.start + (range_length as f32 * $t_val) as $t
+            }
         }
     }};
     // simple RangeInclusive<T>
