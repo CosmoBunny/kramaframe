@@ -138,6 +138,8 @@ You can find more detailed examples in the `/examples` directory of the reposito
 *   `iterrange.rs`: A complete, runnable version of the basic usage example.
 *   `allkeyframe.rs`: Demonstrates and visualizes all available `KeyFrameFunction` types.
 *   `reverse.rs`: Demonstrates how to reverse the direction of an animation instance.
+*   `reverserange.rs`: Demonstrates how to reverse the range of an animation instance.
+*   `generic.rs`: Demonstrates how to use generic types with `KramaFrame`.
 
 ## License
 
