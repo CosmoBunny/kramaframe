@@ -1,4 +1,4 @@
-![logo](./logo.png)
+![logo](./logo.svg)
 
 A simple, generic, and flexible keyframe animation library for Rust.
 
