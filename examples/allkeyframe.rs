@@ -30,36 +30,35 @@ fn main() {
     ]);
 
     // Linear
-    for _ in 0..=60 {
+    kramaframe.restart_progress("linear", 1);
+    for _ in 0..=90 {
         kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
         let linear =
-            kramaframe.animate_by_closure_range("linear", 1, |x| !x, |ongoing| !ongoing, 0..90u32);
+            kramaframe.animate_by_closure_range("linear", 1, |_| true, |_| false, 10..90u32);
         println!("linear : {} : {}", linear, "█".repeat(linear as usize));
     }
     // EaseIn
+    kramaframe.restart_progress("easein", 1);
     for _ in 0..=90 {
-        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 90));
+        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
         let easein =
-            kramaframe.animate_by_closure_range("easein", 1, |x| !x, |ongoing| !ongoing, 0..90u32);
+            kramaframe.animate_by_closure_range("easein", 1, |_| true, |_| false, 10..90u32);
         println!("easein : {} : {}", easein, "█".repeat(easein as usize));
     }
     // EaseOut
+    kramaframe.restart_progress("easeout", 1);
     for _ in 0..=90 {
-        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 90));
+        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
         let easeout =
-            kramaframe.animate_by_closure_range("easeout", 1, |x| !x, |ongoing| !ongoing, 0..90u32);
+            kramaframe.animate_by_closure_range("easeout", 1, |_| true, |_| false, 10..90u32);
         println!("easeout : {} : {}", easeout, "█".repeat(easeout as usize));
     }
     // EaseInOut
+    kramaframe.restart_progress("easeinout", 1);
     for _ in 0..=90 {
-        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 90));
-        let easeinout = kramaframe.animate_by_closure_range(
-            "easeinout",
-            1,
-            |x| !x,
-            |ongoing| !ongoing,
-            0..90u32,
-        );
+        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
+        let easeinout =
+            kramaframe.animate_by_closure_range("easeinout", 1, |_| true, |_| false, 10..90u32);
         println!(
             "easeinout : {} : {}",
             easeinout,
@@ -67,17 +66,17 @@ fn main() {
         );
     }
     // Cubic
+    kramaframe.restart_progress("cubic", 1);
     for _ in 0..=90 {
-        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 90));
-        let cubic =
-            kramaframe.animate_by_closure_range("cubic", 1, |x| !x, |ongoing| !ongoing, 0..90u32);
+        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
+        let cubic = kramaframe.animate_by_closure_range("cubic", 1, |_| true, |_| false, 10..90u32);
         println!("cubic : {} : {}", cubic, "█".repeat(cubic as usize));
     }
     // Steps
+    kramaframe.restart_progress("step", 1);
     for _ in 0..=90 {
-        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 90));
-        let steps =
-            kramaframe.animate_by_closure_range("step", 1, |x| !x, |ongoing| !ongoing, 0..90u32);
+        kramaframe.update_progress(TRES16Bits::from_millis(1000 / 60));
+        let steps = kramaframe.animate_by_closure_range("step", 1, |_| true, |_| false, 10..90u32);
         println!("steps : {} : {}", steps, "█".repeat(steps as usize));
     }
 }

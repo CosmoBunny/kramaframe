@@ -10,7 +10,7 @@ fn main() {
 
     for i in 0..=60 {
         animation_instance.update_progress(TRES16Bits::from_millis(16));
-        let value = animation_instance.get_value_byrange_inclusive("sample", 1, 100..=10i32);
+        let value = animation_instance.get_value_byrange_inclusive("sample", 1, 100..=10u32);
         println!("Value at frame {}: {}", i, value);
     }
 }

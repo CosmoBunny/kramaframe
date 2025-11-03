@@ -25,7 +25,7 @@ A simple, generic, and flexible keyframe animation library for Rust.
 Add `kramaframe` to your project's `Cargo.toml`:
 ```toml
 [dependencies]
-kramaframe = "0.1.3"
+kramaframe = "0.1.4"
 ```
 
 Or, add it via the command line:
