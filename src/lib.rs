@@ -229,6 +229,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
 
      ## Example of implementation
      ```rust
+        use std::ops::{Add, Sub, Mul};
         #[derive(Clone, Copy)]
         struct Point {
             x: f32,
@@ -303,6 +304,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
 
      ## Example of implementation
      ```rust
+        use std::ops::{Add, Sub, Mul};
         #[derive(Clone, Copy)]
         struct Point {
             x: f32,
