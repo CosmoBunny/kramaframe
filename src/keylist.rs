@@ -76,11 +76,13 @@ macro_rules! interpolate_range_common {
 List of Progress is stored by ID. Each specific ID has a specific timing and different progress.
 
 */
-pub struct KeyList<TRES: TimingResolution, PRES: ProgressResolution + Eq> {
+pub struct KeyList<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> {
     progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
 }
 
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> Default for KeyList<TRES, PRES> {
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
+    for KeyList<TRES, PRES>
+{
     fn default() -> Self {
         KeyList {
             progresses: BTreeMap::new(),
@@ -90,7 +92,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> Default for KeyList<
 
 // From Array that create new KeyList.
 // Example: [400,500,800,400] each array index become id and it's element become timing.
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> From<Vec<TRES>>
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> From<Vec<TRES>>
     for KeyList<TRES, PRES>
 {
     fn from(vec: Vec<TRES>) -> Self {
@@ -102,7 +104,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> From<Vec<TRES>>
     }
 }
 // Slice also
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq, const N: usize> From<[TRES; N]>
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq, const N: usize> From<[TRES; N]>
     for KeyList<TRES, PRES>
 {
     fn from(slice: [TRES; N]) -> Self {
@@ -114,7 +116,11 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq, const N: usize> From
     }
 }
 
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> KeyList<TRES, PRES> {
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> KeyList<TRES, PRES> {
+    pub fn get_progresses(&self) -> &BTreeMap<u32, ProgressList<TRES, PRES>> {
+        &self.progresses
+    }
+
     pub fn new(id: u32, time: TRES) -> Self {
         let mut keylist = KeyList::default();
         keylist.new_id(id, time);
@@ -191,7 +197,7 @@ pub struct ProgressList<TRES: TimingResolution, PRES: ProgressResolution + Eq> {
     progress: PRES,
 }
 
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> ProgressList<TRES, PRES> {
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> ProgressList<TRES, PRES> {
     pub fn new(time: TRES, progress: PRES) -> Self {
         Self { time, progress }
     }
@@ -215,11 +221,14 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> ProgressList<TRES, P
     pub fn max(&mut self) {
         self.progress = PRES::max();
     }
-    pub fn zero(&mut self) {
+    pub fn set_progress_zero(&mut self) {
         self.progress = PRES::zero();
     }
     pub fn get_progress_f32(&self) -> f32 {
         self.progress.to_f32()
+    }
+    pub fn get_time(&self) -> TRES {
+        self.time.clone()
     }
     pub fn get_time_f32(&self) -> f32 {
         self.time.to_sec()
@@ -278,7 +287,7 @@ pub trait GetValueByGeneric<T> {
     ) -> T;
 }
 
-impl<T, TRES: TimingResolution, PRES: ProgressResolution + Eq> GetValueByGeneric<T>
+impl<T, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> GetValueByGeneric<T>
     for ProgressList<TRES, PRES>
 where
     T: Sized + Add<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Copy,
@@ -401,7 +410,7 @@ pub trait GetValueByRange<T> {
 
 macro_rules! impl_get_value_by_range {
     ($t:ty) => {
-        impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> GetValueByRange<$t>
+        impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> GetValueByRange<$t>
             for ProgressList<TRES, PRES>
         {
             fn get_value_byrange(&self, range: Range<$t>, keyframe: &KeyFrameFunction) -> $t {
@@ -531,15 +540,21 @@ f32 is available but not recommended for time resolution as it has a limited pre
 pub trait TimingResolution {
     fn to_sec(&self) -> f32;
     fn from_sec(sec: f32) -> Self;
+    fn zero() -> Self;
 }
 
+#[derive(Clone)]
 pub struct TRES16Bits(pub u16);
+
 impl TimingResolution for TRES16Bits {
     fn to_sec(&self) -> f32 {
         self.0 as f32 / 1000.0
     }
     fn from_sec(sec: f32) -> Self {
         Self((sec * 1000.0) as u16)
+    }
+    fn zero() -> Self {
+        Self(0)
     }
 }
 
@@ -559,8 +574,12 @@ impl TimingResolution for u16 {
     fn from_sec(sec: f32) -> Self {
         (sec * 1000.0) as u16
     }
+    fn zero() -> Self {
+        0
+    }
 }
 
+#[derive(Clone)]
 pub struct TRES32Bits(pub u32);
 impl TimingResolution for TRES32Bits {
     fn to_sec(&self) -> f32 {
@@ -568,6 +587,9 @@ impl TimingResolution for TRES32Bits {
     }
     fn from_sec(sec: f32) -> Self {
         Self((sec * 1000000.0) as u32)
+    }
+    fn zero() -> Self {
+        Self(0)
     }
 }
 
@@ -590,6 +612,9 @@ impl TimingResolution for u32 {
     fn from_sec(sec: f32) -> Self {
         (sec * 1000000.0) as u32
     }
+    fn zero() -> Self {
+        0
+    }
 }
 
 impl TimingResolution for f32 {
@@ -598,6 +623,9 @@ impl TimingResolution for f32 {
     }
     fn from_sec(sec: f32) -> Self {
         sec
+    }
+    fn zero() -> Self {
+        0.0
     }
 }
 

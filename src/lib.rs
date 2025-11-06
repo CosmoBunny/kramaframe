@@ -35,7 +35,7 @@ pub struct KramaFrame<CL, FL> {
     pub framelist: FL,
 }
 
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> Default
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KramaFrame<BTreeMap<&'static str, KeyFrameFunction>, BTframelist<TRES, PRES>>
 {
     /// Creates a new, empty `KramaFrame` with default BTreeMap-based storage.
@@ -47,7 +47,7 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq> Default
     }
 }
 
-impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
+impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<BTclasslist, BTreeMap<&'static str, KeyList<TRES, PRES>>>
 {
     /// Extends the class list with new definitions or replaces existing ones.
@@ -144,6 +144,72 @@ impl<TRES: TimingResolution, PRES: ProgressResolution + Eq>
         } else {
             0.0
         }
+    }
+
+    pub fn remove_classname(&mut self, classname: &'static str) {
+        self.framelist.remove(classname);
+        self.classlist.remove(classname);
+    }
+
+    pub fn replace_classname(&mut self, old_classname: &'static str, new_classname: &'static str) {
+        // check if the old class name exists
+        if let Some(keyframe) = self.classlist.remove(old_classname) {
+            if let Some(frames) = self.framelist.remove(old_classname) {
+                // insert the frames with the new class name
+                self.framelist.insert(new_classname, frames);
+            }
+            self.classlist.insert(new_classname, keyframe);
+        }
+    }
+    pub fn set_timing(&mut self, classname: &'static str, id: u32, timing: TRES) {
+        if let Some(frames) = self.framelist.get_mut(classname) {
+            frames.set_time(id, timing);
+        }
+    }
+
+    pub fn get_timing(&self, classname: &'static str, id: u32) -> TRES {
+        if let Some(frames) = self.framelist.get(classname) {
+            if let Some(progresslist) = frames.get(id) {
+                progresslist.get_time()
+            } else {
+                TRES::zero()
+            }
+        } else {
+            TRES::zero()
+        }
+    }
+
+    pub fn is_reversed(&self, classname: &'static str, id: u32) -> bool {
+        if let Some(keylist) = self.framelist.get(classname) {
+            if let Some(progresslist) = keylist.get(id) {
+                progresslist.is_reverse()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn is_all_animation_inprogress(&self) -> bool {
+        let mut inprogress = false;
+
+        // get all defined classname in the classlist
+        for (classname, _) in &self.classlist {
+            if let Some(keylist) = self.framelist.get(classname) {
+                for (_, progress) in keylist.get_progresses() {
+                    if progress.is_animating() {
+                        inprogress = true;
+                        break;
+                    }
+                }
+            }
+            if inprogress {
+                break;
+            }
+        }
+
+        inprogress
     }
 
     /// Gets the current elapsed time of a specific animation instance in seconds.
