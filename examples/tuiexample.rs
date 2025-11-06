@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::io::{self, Stdout};
 use std::ops::{Add, Mul, Sub};
-use std::thread;
 use std::time::{Duration, Instant};
 
 use cand::{Logger, MultiLogger, StatusLevel, StorageProvider, black_box_cand};
@@ -117,6 +116,7 @@ impl AnimationRack {
         logger: &mut MultiLogger<Instant, ErrorConv>,
     ) {
         let mut last_tick = Instant::now();
+        let tick_rate = Duration::from_millis(self.res_rate_ms as u64);
 
         // Main running app loop
         while !self.quit {
@@ -124,28 +124,23 @@ impl AnimationRack {
                 self.update(message);
             }
 
-            let (msg, _) = logger.try_get(self.handler(), |_| {});
+            let timeout = tick_rate
+                .checked_sub(last_tick.elapsed())
+                .unwrap_or_else(|| Duration::from_secs(0));
+
+            let (msg, _) = logger.try_get(self.handler(timeout), |_| {});
             if let Some(msg) = msg {
                 self.update(msg);
             }
-            let elapsed = last_tick.elapsed().as_secs_f32();
-            let lag = self.res_rate_ms as f32 / 1000. - elapsed;
 
-            // if lag +ve then it means view to update and event update done under expected response time.
-            if lag >= 0.0 {
-                // sleep remaining time.
-                thread::sleep(Duration::from_secs_f32(lag));
+            let elapsed = last_tick.elapsed();
+            if elapsed >= tick_rate {
+                self.lag = (elapsed.as_millis() as i64 - tick_rate.as_millis() as i64) as f32;
                 self.animation
-                    .update_progress(TRES16Bits::from_millis(self.res_rate_ms as u16));
-                self.lag = 0.0;
-            } else if lag < 0.0 {
-                // update animate in addition of lag
-                self.animation
-                    .update_progress(TRES16Bits::from_sec(lag + self.res_rate_ms as f32 / 1000.));
-                self.lag = lag;
+                    .update_progress(TRES16Bits::from_millis(elapsed.as_millis() as u16));
+                self.permanet_animation();
+                last_tick = Instant::now();
             }
-            self.permanet_animation();
-            last_tick = Instant::now();
         }
     }
     fn view(
@@ -373,9 +368,9 @@ impl AnimationRack {
         anim_control!(self.animation, "quadratic");
     }
 
-    fn handler(&mut self) -> Result<Option<Message>, Box<dyn Error>> {
-        // Check if an event is available within zero duration (non-blocking)
-        if event::poll(Duration::from_millis(3))? {
+    fn handler(&mut self, timeout: Duration) -> Result<Option<Message>, Box<dyn Error>> {
+        // Check if an event is available within the timeout
+        if event::poll(timeout)? {
             match event::read()? {
                 event::Event::Resize(_, _) => Ok(Some(Message::Update)),
                 event::Event::Key(key) => {
@@ -444,9 +439,9 @@ impl Widget for Container {
                 Constraint::Length(text_width),
             ],
         );
-        let fill = (area.height - 2) as f32 * self.slide * 10.;
+        let fill = (area.height - 2) as f32 * self.slide;
 
-        // █▇▆▅▄▃▂▁ 10/8 = 1.25
+        // █▇▆▅▄▃▂  10/8 = 1.25
         // 10   -> █
         // 8.75 -> ▇
         // 7.5  -> ▆
@@ -457,16 +452,16 @@ impl Widget for Container {
         // 1.25 -> ▁
         // let 68 , 6 full block █ and remainder is 8 which near 7.5 but take 8.75 as roundup to get color factoring = 8.75 - 8 = 0.75.
 
-        let no_of_full_blocks = (fill / 10.0).floor() as u16;
+        let no_of_full_blocks = fill.floor() as u16;
         let last_block = match fill - no_of_full_blocks as f32 {
-            x @ 8.75..10.0 => ("█████", 10. - x),
-            x @ 7.5..8.75 => ("▇▇▇▇▇", 8.75 - x),
-            x @ 6.25..7.5 => ("▆▆▆▆▆", 7.5 - x),
-            x @ 5.0..6.25 => ("▅▅▅▅▅", 6.25 - x),
-            x @ 3.75..5.0 => ("▄▄▄▄▄", 5.0 - x),
-            x @ 2.5..3.75 => ("▃▃▃▃▃", 3.75 - x),
-            x @ 1.25..2.5 => ("▂▂▂▂▂", 2.5 - x),
-            x @ 0.0..1.25 => ("▁▁▁▁▁", 1.25 - x),
+            x @ 0.875..1.00 => ("█████", 10. - x),
+            x @ 0.75..0.875 => ("▇▇▇▇▇", 8.75 - x),
+            x @ 0.625..0.75 => ("▆▆▆▆▆", 7.5 - x),
+            x @ 0.50..0.625 => ("▅▅▅▅▅", 6.25 - x),
+            x @ 0.375..0.50 => ("▄▄▄▄▄", 5.0 - x),
+            x @ 0.25..0.375 => ("▃▃▃▃▃", 3.75 - x),
+            x @ 0.125..0.25 => ("▂▂▂▂▂", 2.5 - x),
+            x @ 0.0..0.125 => ("▁▁▁▁▁", 1.25 - x),
             _ => (" ", 0.0),
         };
         let mut lines = Vec::new();
@@ -476,7 +471,7 @@ impl Widget for Container {
 
         let page = page_layout.margin(1).split(area);
         let color_ratio = AnimatingColor(Color::Rgb(10, 250, 255)) * (last_block.1 / 1.25);
-        lines.push(Line::raw(self.class).fg(color_ratio.0));
+        lines.push(Line::raw(last_block.0).fg(color_ratio.0));
         let material = Layout::new(
             Direction::Horizontal,
             [Constraint::Length(6), Constraint::Length(page[0].width - 6)],
