@@ -141,6 +141,10 @@ You can find more detailed examples in the `/examples` directory of the reposito
 *   `reverserange.rs`: Demonstrates how to reverse the range of an animation instance.
 *   `generic.rs`: Demonstrates how to use generic types with `KramaFrame`.
 
+## Special Example
+
+*   `tuiexample.rs`: Demonstrates how to use `KramaFrame` with a TUI (Text User Interface) library.
+
 ## License
 
 This project is licensed under

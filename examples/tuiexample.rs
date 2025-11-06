@@ -244,7 +244,7 @@ impl AnimationRack {
                                 .fg(if index == self.tab.curr {
                                     active.0
                                 } else {
-                                    Color::Gray
+                                    Color::DarkGray
                                 })
                                 .block(Block::bordered()),
                             menu_area[index],
