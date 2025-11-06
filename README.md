@@ -145,6 +145,8 @@ You can find more detailed examples in the `/examples` directory of the reposito
 
 *   `tuiexample.rs`: Demonstrates how to use `KramaFrame` with a TUI (Text User Interface) library.
 
+https://github.com/user-attachments/assets/965e693f-8cdc-4165-81b5-4c0ef38c1f4a
+
 ## License
 
 This project is licensed under
