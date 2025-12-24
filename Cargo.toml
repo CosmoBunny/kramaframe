@@ -10,8 +10,6 @@ keywords = ["animation", "keyframe", "easing", "tweening", "timeline"]
 categories = ["multimedia::images", "game-development"]
 
 [features]
-# Future features
-# gpu_accn = []
 no_std = []
 alloc = []
 default = []
