@@ -1,6 +1,6 @@
 [package]
 name = "kramaframe"
-version = "0.1.8"
+version = "0.2.0"
 edition = "2024"
 readme = "README.md"
 description = "A simple, generic, and flexible keyframe animation library for Rust."
@@ -12,8 +12,8 @@ categories = ["multimedia::images", "game-development"]
 [features]
 # Future features
 # gpu_accn = []
-# no_std = []
-# alloc = []
+no_std = []
+alloc = []
 default = []
 
 [dependencies]

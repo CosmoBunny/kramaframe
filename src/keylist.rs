@@ -80,6 +80,91 @@ pub struct KeyList<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq
     progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
 }
 
+pub struct MicroKeyList<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>(
+    pub &'a mut [(UN, ProgressList<TRES, PRES>)],
+);
+
+impl<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
+    MicroKeyList<'a, UN, TRES, PRES>
+{
+    pub fn set_time(&mut self, id: &UN, time: TRES) {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                progresslist.time = time;
+                break;
+            }
+        }
+    }
+    pub fn get_time(&mut self, id: &UN) -> TRES {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                return progresslist.get_time();
+            }
+        }
+        TRES::from_sec(0.0)
+    }
+    pub fn get_time_f32(&mut self, id: &UN) -> f32 {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                return progresslist.get_time_f32();
+            }
+        }
+        0.0
+    }
+    pub fn is_reversed(&mut self, id: &UN) -> bool {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                return progresslist.is_reverse();
+            }
+        }
+        false
+    }
+
+    pub fn is_animating(&mut self, id: &UN) -> bool {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                return progresslist.is_animating();
+            }
+        }
+        false
+    }
+    pub fn is_any_animation_inprogress(&mut self) -> bool {
+        for (_, progresslist) in self.0.iter_mut() {
+            if progresslist.is_animating() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn reverse_start(&mut self, id: &UN) {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                progresslist.reverse_start();
+                break;
+            }
+        }
+    }
+
+    pub fn restart(&mut self, id: &UN) {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                progresslist.restart();
+                break;
+            }
+        }
+    }
+
+    pub fn reverse(&mut self, id: &UN) {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                progresslist.reverse();
+                break;
+            }
+        }
+    }
+}
+
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KeyList<TRES, PRES>
 {
@@ -192,6 +277,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> KeyList<TRES
     }
 }
 
+#[derive(Debug)]
 pub struct ProgressList<TRES: TimingResolution, PRES: ProgressResolution + Eq> {
     time: TRES,
     progress: PRES,

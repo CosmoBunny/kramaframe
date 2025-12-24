@@ -1,3 +1,4 @@
+#[cfg(not(feature = "no_std"))]
 use std::{
     collections::BTreeMap,
     ops::{Range, RangeInclusive},
@@ -6,8 +7,15 @@ use std::{
 use crate::{
     keyframe::KeyFrameFunction,
     keylist::{GetValueByGeneric, GetValueByRange, KeyList, ProgressResolution, TimingResolution},
+    microcl::UClassList,
+    microfl::UFrameList,
 };
 
+// For non-alloc and no_std
+pub mod microcl;
+pub mod microfl;
+
+pub mod test;
 pub mod prelude {
     pub use crate::keyframe::KeyFrameFunction;
     pub use crate::keylist::{
@@ -35,6 +43,7 @@ pub struct KramaFrame<CL, FL> {
     pub framelist: FL,
 }
 
+#[cfg(not(feature = "no_std"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KramaFrame<BTreeMap<&'static str, KeyFrameFunction>, BTframelist<TRES, PRES>>
 {
@@ -47,6 +56,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     }
 }
 
+#[cfg(not(feature = "no_std"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<BTclasslist, BTreeMap<&'static str, KeyList<TRES, PRES>>>
 {
@@ -137,13 +147,10 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     pub fn get_progress_f32(&self, classname: &'static str, id: u32) -> f32 {
         if let Some(keylist) = self.framelist.get(classname) {
             if let Some(progresslist) = keylist.get(id) {
-                progresslist.get_progress_f32()
-            } else {
-                0.0
+                return progresslist.get_progress_f32();
             }
-        } else {
-            0.0
         }
+        0.0
     }
 
     pub fn remove_classname(&mut self, classname: &'static str) {
@@ -170,46 +177,33 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     pub fn get_timing(&self, classname: &'static str, id: u32) -> TRES {
         if let Some(frames) = self.framelist.get(classname) {
             if let Some(progresslist) = frames.get(id) {
-                progresslist.get_time()
-            } else {
-                TRES::zero()
+                return progresslist.get_time();
             }
-        } else {
-            TRES::zero()
         }
+        TRES::zero()
     }
 
     pub fn is_reversed(&self, classname: &'static str, id: u32) -> bool {
         if let Some(keylist) = self.framelist.get(classname) {
             if let Some(progresslist) = keylist.get(id) {
-                progresslist.is_reverse()
-            } else {
-                false
+                return progresslist.is_reverse();
             }
-        } else {
-            false
         }
+        false
     }
 
-    pub fn is_all_animation_inprogress(&self) -> bool {
-        let mut inprogress = false;
-
-        // get all defined classname in the classlist
+    pub fn is_any_animation_inprogress(&self) -> bool {
         for (classname, _) in &self.classlist {
             if let Some(keylist) = self.framelist.get(classname) {
                 for (_, progress) in keylist.get_progresses() {
                     if progress.is_animating() {
-                        inprogress = true;
-                        break;
+                        return true;
                     }
                 }
             }
-            if inprogress {
-                break;
-            }
         }
 
-        inprogress
+        false
     }
 
     /// Gets the current elapsed time of a specific animation instance in seconds.
@@ -218,13 +212,10 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     pub fn get_time_f32(&self, classname: &'static str, id: u32) -> f32 {
         if let Some(keylist) = self.framelist.get(classname) {
             if let Some(progresslist) = keylist.get(id) {
-                progresslist.get_time_f32()
-            } else {
-                0.0
+                return progresslist.get_time_f32();
             }
-        } else {
-            0.0
         }
+        0.0
     }
 
     /// Calculates and returns an interpolated value for an animation within a given `Range`.
@@ -240,16 +231,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         if let Some(keyframe) = self.classlist.get(on_classname) {
             if let Some(keylist) = self.framelist.get(on_classname) {
                 if let Some(progresslist) = keylist.get(id) {
-                    progresslist.get_value_byrange(range, keyframe)
-                } else {
-                    range.start
+                    return progresslist.get_value_byrange(range, keyframe);
                 }
-            } else {
-                range.start
             }
-        } else {
-            range.start
         }
+        range.start
     }
 
     /// Calculates and returns an interpolated value for an animation within a given `RangeInclusive`.
@@ -271,16 +257,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         if let Some(keyframe) = self.classlist.get(on_classname) {
             if let Some(keylist) = self.framelist.get(on_classname) {
                 if let Some(progresslist) = keylist.get(id) {
-                    progresslist.get_value_byrangeinclusive(range, keyframe)
-                } else {
-                    range.start().clone()
+                    return progresslist.get_value_byrangeinclusive(range, keyframe);
                 }
-            } else {
-                range.start().clone()
             }
-        } else {
-            range.start().clone()
         }
+        range.start().clone()
     }
     /**
      Gets a value from a `Range` based on animation progress, for generic types.
@@ -345,16 +326,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         if let Some(keyframe) = self.classlist.get(on_classname) {
             if let Some(keylist) = self.framelist.get(on_classname) {
                 if let Some(progresslist) = keylist.get(id) {
-                    progresslist.get_generic_byrange(range, keyframe)
-                } else {
-                    range.start
+                    return progresslist.get_generic_byrange(range, keyframe);
                 }
-            } else {
-                range.start
             }
-        } else {
-            range.start
         }
+        range.start
     }
 
     /**
@@ -425,16 +401,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         if let Some(keyframe) = self.classlist.get(on_classname) {
             if let Some(keylist) = self.framelist.get(on_classname) {
                 if let Some(progresslist) = keylist.get(id) {
-                    progresslist.get_generic_byrangeinclusive(range, keyframe)
-                } else {
-                    range.start().clone()
+                    return progresslist.get_generic_byrangeinclusive(range, keyframe);
                 }
-            } else {
-                range.start().clone()
             }
-        } else {
-            range.start().clone()
         }
+        range.start().clone()
     }
 
     /// Reverses the direction of a specific animation instance.
@@ -465,13 +436,10 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     pub fn is_animating(&self, on_classname: &'static str, id: u32) -> bool {
         if let Some(keylist) = self.framelist.get(on_classname) {
             if let Some(progresslist) = keylist.get(id) {
-                progresslist.is_animating()
-            } else {
-                false
+                return progresslist.is_animating();
             }
-        } else {
-            false
         }
+        false
     }
 
     /// A flexible method to control an animation's state using closures and retrieve its current value.
@@ -515,16 +483,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
                     if restart_need {
                         progresslist.restart();
                     }
-                    previous
-                } else {
-                    range.start
+                    return previous;
                 }
-            } else {
-                range.start
             }
-        } else {
-            range.start
         }
+        range.start
     }
 
     /// A flexible method to control an animation's state using closures and retrieve its current value.
@@ -567,16 +530,11 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
                     if restart_need {
                         progresslist.restart();
                     }
-                    previous
-                } else {
-                    range.start
+                    return previous;
                 }
-            } else {
-                range.start
             }
-        } else {
-            range.start
         }
+        range.start
     }
 }
 
@@ -584,3 +542,468 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
 pub type BTclasslist = BTreeMap<&'static str, KeyFrameFunction>;
 /// A type alias for a frame list implemented with `BTreeMap`.
 pub type BTframelist<TRES, PRES> = BTreeMap<&'static str, KeyList<TRES, PRES>>;
+
+impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
+    KramaFrame<UClassList<N>, UFrameList<'a, N, UN, TRES, PRES>>
+{
+    pub fn update_progress(&mut self, delta_time: TRES) {
+        for item in self.framelist.0.iter_mut() {
+            let ukeylists = &mut item.1;
+
+            for ukeylist in ukeylists.iter_mut() {
+                for (_, progreslist) in &mut *ukeylist.0 {
+                    progreslist.update_progress(&delta_time);
+                }
+            }
+        }
+    }
+
+    /// Restarts the progress of a specific animation instance.
+    pub fn restart_progress(&mut self, classname: &'static str, id: UN) {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in ukeylist.0.iter_mut() {
+                        if *inid == id {
+                            progresslist.restart();
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    pub fn get_progress_f32(&mut self, classname: &'static str, id: UN) -> f32 {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in ukeylist.0.iter_mut() {
+                        if *inid == id {
+                            return progresslist.get_progress_f32();
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        0.0
+    }
+
+    pub fn set_timing(&mut self, classname: &'static str, id: UN, timing: TRES) {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    ukeylist.set_time(&id, timing.clone());
+                }
+                break;
+            }
+        }
+    }
+
+    pub fn get_timing(&mut self, classname: &'static str, id: UN) -> TRES {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    return ukeylist.get_time(&id);
+                }
+                break;
+            }
+        }
+        TRES::from_sec(0.0)
+    }
+
+    pub fn is_reversed(&mut self, classname: &'static str, id: UN) -> bool {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    return ukeylist.is_reversed(&id);
+                }
+                break;
+            }
+        }
+        false
+    }
+
+    pub fn is_any_animation_inprogress(&mut self) -> bool {
+        for (_, ukeylists) in &mut self.framelist.0 {
+            for ukeylist in ukeylists.iter_mut() {
+                if ukeylist.is_any_animation_inprogress() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn get_time_f32(&mut self, classname: &'static str, id: UN) -> f32 {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    return ukeylist.get_time_f32(&id);
+                }
+                break;
+            }
+        }
+        0.0
+    }
+
+    pub fn get_value_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
+    where
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
+    {
+        let mut keyframe = KeyFrameFunction::Linear; // Start with default
+
+        for (inclass, kf) in self.classlist.0.iter() {
+            if *inclass == classname {
+                keyframe = *kf; // Update value
+                break; // Stop searching
+            }
+        }
+
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in &mut *ukeylist.0 {
+                        if *inid == id {
+                            return progresslist.get_value_byrange(range, &keyframe);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        range.start
+    }
+
+    pub fn get_value_byrange_inclusive<T>(
+        &mut self,
+        classname: &'static str,
+        id: UN,
+        range: RangeInclusive<T>,
+    ) -> T
+    where
+        T: Clone,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
+    {
+        let mut keyframe = KeyFrameFunction::Linear; // Start with default
+
+        for (inclass, kf) in self.classlist.0.iter() {
+            if *inclass == classname {
+                keyframe = *kf; // Update value
+                break; // Stop searching
+            }
+        }
+
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in &mut *ukeylist.0 {
+                        if *inid == id {
+                            return progresslist.get_value_byrangeinclusive(range, &keyframe);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        range.start().clone()
+    }
+
+    pub fn get_generic_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
+    where
+        T: Copy,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
+    {
+        let mut keyframe = KeyFrameFunction::Linear; // Start with default
+
+        for (inclass, kf) in self.classlist.0.iter() {
+            if *inclass == classname {
+                keyframe = *kf; // Update value
+                break; // Stop searching
+            }
+        }
+
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in &mut *ukeylist.0 {
+                        if *inid == id {
+                            return progresslist.get_generic_byrange(range, &keyframe);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        range.start
+    }
+
+    pub fn get_generic_value_by_rangeinclusive<T>(
+        &mut self,
+        classname: &'static str,
+        id: UN,
+        range: RangeInclusive<T>,
+    ) -> T
+    where
+        T: Clone,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
+    {
+        let mut keyframe = KeyFrameFunction::Linear; // Start with default
+
+        for (inclass, kf) in self.classlist.0.iter() {
+            if *inclass == classname {
+                keyframe = *kf; // Update value
+                break; // Stop searching
+            }
+        }
+
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    for (inid, progresslist) in &mut *ukeylist.0 {
+                        if *inid == id {
+                            return progresslist.get_generic_byrangeinclusive(range, &keyframe);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        range.start().clone()
+    }
+    pub fn reverse_animate(&mut self, classname: &'static str, id: UN) {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    ukeylist.reverse(&id);
+                }
+                break;
+            }
+        }
+    }
+
+    pub fn reverse_start(&mut self, classname: &'static str, id: UN) {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    ukeylist.reverse_start(&id);
+                }
+                break;
+            }
+        }
+    }
+
+    pub fn is_animating(&mut self, classname: &'static str, id: UN) -> bool {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    ukeylist.is_animating(&id);
+                }
+                break;
+            }
+        }
+        false
+    }
+}
+
+/// Creates a compile-time, zero-allocation `KramaFrame` instance using stack-allocated micro types.
+///
+/// This macro constructs a `KramaFrame<UClassList<'static>, UFrameList<'static, N, u32, TRES, PRES>>`
+/// where all data resides on the stack (no heap allocations). It is intended for scenarios requiring
+/// maximum performance and predictability, such as embedded systems or high-frequency animation updates.
+///
+/// The macro requires explicit specification of the timing and progress resolution types (`TRES` and `PRES`).
+/// All keyframes are initialized with `progress: PRES::zero()` and the provided animation duration.
+///
+/// ### Syntax
+///
+/// ```text
+/// ukramaframe!(
+///     "class_name" EasingFunction [key_id1, key_id2, ..., key_idN] duration s ;
+///     ...
+/// );
+/// ```
+///
+/// - `<TRES, PRES>`: Concrete types implementing `TimingResolution` and `ProgressResolution`, respectively.
+/// - `"class_name"`: A string literal identifying the animation class (must be `'static`).
+/// - `EasingFunction`: A variant of `KeyFrameFunction` (e.g., `Linear`, `EaseIn`, `EaseOut`, `EaseInOut`).
+/// - `[key_id1, key_id2, ...]`: A comma-separated list of `u32` literal key identifiers.
+///   Trailing commas are permitted.
+/// - `duration s`: Animation duration in seconds.
+///   - Integer form: `4 s` → internally cast to `f32`.
+///   - Floating-point form: `4.0 s` → used directly.
+///
+/// Multiple entries are separated by semicolons. A single entry may omit the trailing semicolon.
+///
+/// ### Examples
+///
+/// **Single entry (integer duration):**
+///
+/// ```ignore
+/// use kramaframe::{ukramaframe, TRES16Bits};
+///
+/// let anim = ukramaframe!(<TRES16Bits, i16> "button" EaseIn [1, 2, 3, 4, 5, 6] 4 s);
+/// ```
+///
+/// **Single entry (floating-point duration):**
+///
+/// ```ignore
+/// use kramaframe::ukramaframe;
+///
+/// let anim = ukramaframe!(<TRES16Bits, i16> "button" EaseIn [1, 2, 3] 4.0 s);
+/// ```
+///
+/// **Multiple entries (mixed durations):**
+///
+/// ```ignore
+/// use kramaframe::ukramaframe;
+///
+/// let anim = ukramaframe!(<TRES16Bits, i16>
+///     "menu"   EaseIn   [1, 2, 3]      2 s;
+///     "button" EaseOut  [4, 5, 6, 7]  1.5 s;
+///     "header" Linear   [8, 9]       3.0 s;
+/// );
+/// ```
+///
+/// No additional trait imports are required; the macro uses fully qualified paths for
+/// `TimingResolution::from_sec` and `ProgressResolution::zero`.
+///
+/// This design ensures zero runtime overhead while preserving compile-time type safety and flexibility.
+#[macro_export]
+macro_rules! ukramaframe {
+    // =========================================================================
+    // BRANCH 1: 3 Generics <TRES, PRES, UN> (Explicit ID Type) - Multiple Entries
+    // =========================================================================
+    (<$TRES:ty, $PRES:ty, $UN:ty>
+        $(
+            $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ;
+        )+
+    ) => {{
+        const N: usize = $crate::count!($( $class ),+);
+
+        // Note: casting keys ($key as $UN) is crucial here
+        const CLASSLIST_ARRAY: [(&'static str, $crate::keyframe::KeyFrameFunction); N] = [
+            $( ($class, $crate::keyframe::KeyFrameFunction::$easing) ),+
+        ];
+
+        $crate::KramaFrame {
+            classlist: $crate::microcl::UClassList(CLASSLIST_ARRAY),
+            framelist: $crate::microfl::UFrameList([
+                $(
+                    (
+                        $class,
+                        &mut [ $crate::keylist::MicroKeyList(&mut [
+                            $(
+                                (
+                                    $key as $UN,
+                                    $crate::keylist::ProgressList::new(
+                                        <$TRES>::from_sec($duration as f32),
+                                        <$PRES as $crate::keylist::ProgressResolution>::zero(),
+                                    )
+                                ),
+                            )*
+                        ]) ]
+                    ),
+                )+
+            ]),
+        }
+    }};
+
+    // =========================================================================
+    // BRANCH 2: 3 Generics <TRES, PRES, UN> (Explicit ID Type) - Single Entry
+    // =========================================================================
+    (<$TRES:ty, $PRES:ty, $UN:ty> $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ) => {{
+        const CLASS: &'static str = $class;
+
+        $crate::KramaFrame {
+            classlist: $crate::microcl::UClassList([ (CLASS, $crate::keyframe::KeyFrameFunction::$easing) ]),
+            framelist: $crate::microfl::UFrameList([(
+                CLASS,
+                &mut [ $crate::keylist::MicroKeyList(&mut [
+                    $(
+                        (
+                            $key as $UN,
+                            $crate::keylist::ProgressList::new(
+                                <$TRES>::from_sec($duration as f32),
+                                <$PRES as $crate::keylist::ProgressResolution>::zero(),
+                            )
+                        ),
+                    )*
+                ]) ]
+            )]),
+        }
+    }};
+
+    // =========================================================================
+    // BRANCH 3: 2 Generics <TRES, PRES> (Inferred ID Type) - Multiple Entries
+    // =========================================================================
+    (<$TRES:ty, $PRES:ty>
+        $(
+            $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ;
+        )+
+    ) => {{
+        const N: usize = $crate::count!($( $class ),+);
+
+        const CLASSLIST_ARRAY: [(&'static str, $crate::keyframe::KeyFrameFunction); N] = [
+            $( ($class, $crate::keyframe::KeyFrameFunction::$easing) ),+
+        ];
+
+        $crate::KramaFrame {
+            classlist: $crate::microcl::UClassList(CLASSLIST_ARRAY),
+            framelist: $crate::microfl::UFrameList([
+                $(
+                    (
+                        $class,
+                        &mut [ $crate::keylist::MicroKeyList(&mut [
+                            $(
+                                (
+                                    $key, // Inferred type (usually i32/u32)
+                                    $crate::keylist::ProgressList::new(
+                                        <$TRES>::from_sec($duration as f32),
+                                        <$PRES as $crate::keylist::ProgressResolution>::zero(),
+                                    )
+                                ),
+                            )*
+                        ]) ]
+                    ),
+                )+
+            ]),
+        }
+    }};
+
+    // =========================================================================
+    // BRANCH 4: 2 Generics <TRES, PRES> (Inferred ID Type) - Single Entry
+    // =========================================================================
+    (<$TRES:ty, $PRES:ty> $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ) => {{
+        const CLASS: &'static str = $class;
+
+        $crate::KramaFrame {
+            classlist: $crate::microcl::UClassList([ (CLASS, $crate::keyframe::KeyFrameFunction::$easing) ]),
+            framelist: $crate::microfl::UFrameList([(
+                CLASS,
+                &mut [ $crate::keylist::MicroKeyList(&mut [
+                    $(
+                        (
+                            $key,
+                            $crate::keylist::ProgressList::new(
+                                <$TRES>::from_sec($duration as f32),
+                                <$PRES as $crate::keylist::ProgressResolution>::zero(),
+                            )
+                        ),
+                    )*
+                ]) ]
+            )]),
+        }
+    }};
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! count {
+    () => { 0 };
+    ($head:tt $(, $tail:tt)*) => {
+        1 + $crate::count!($($tail),*)
+    };
+}
