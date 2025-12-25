@@ -22,15 +22,11 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
                         if *inid == id {
                             return progresslist.get_progress();
                         }
-                        break;
                     }
-                    break;
                 }
-
                 break;
             }
         }
-
         PRES::zero()
     }
     pub fn get_progress_f32(&mut self, class: &'static str, id: UN) -> f32 {
@@ -41,15 +37,11 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
                         if *inid == id {
                             return progresslist.get_progress_f32();
                         }
-                        break;
                     }
-                    break;
                 }
-
                 break;
             }
         }
-
         PRES::zero().to_f32()
     }
 }

@@ -1,6 +1,8 @@
+// NOTE : This code is mostly generate by AI but improved by human. if you see something that can more improve possible pls open PR/Commit withour hesitation. - Thanks for Reading :)
+
 use std::error::Error;
 use std::io::{self, Stdout};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use cand::{Logger, MultiLogger, StatusLevel, StorageProvider, black_box_cand};
@@ -21,7 +23,6 @@ use ringbuf::{Consumer, HeapRb, Producer};
 use rustfft::{FftPlanner, num_complex::Complex, num_traits::Zero};
 
 const FFT_SIZE: usize = 2048;
-const SAMPLE_RATE: u32 = 44100;
 // Increased bands to 60 for finer resolution
 const NUM_BANDS: usize = 60;
 
@@ -85,11 +86,6 @@ fn main() {
     let rb_r = HeapRb::<f32>::new(8192);
     let (prod_l, cons_l) = rb_l.split();
     let (prod_r, cons_r) = rb_r.split();
-
-    let meta_state = Arc::new(Mutex::new(MetaState {
-        device_name: device.name().unwrap_or("Unknown".into()),
-        sample_rate: config.sample_rate().0,
-    }));
 
     let stream = match config.sample_format() {
         cpal::SampleFormat::F32 => {
@@ -159,17 +155,12 @@ fn main() {
         "viz" EaseOut [0] 0.14 s;
     );
 
-    let mut app = AudioApp::new(animation, cons_l, cons_r, meta_state);
+    let mut app = AudioApp::new(animation, cons_l, cons_r);
     app.run(&mut terminal, &mut logger);
 
     let _ = execute!(stdout, LeaveAlternateScreen);
     let _ = disable_raw_mode();
     ratatui::restore();
-}
-
-struct MetaState {
-    device_name: String,
-    sample_rate: u32,
 }
 
 fn run_stream<T>(
@@ -226,7 +217,6 @@ struct AudioApp<'a> {
 
     cons_l: Consumer<f32, Arc<ringbuf::HeapRb<f32>>>,
     cons_r: Consumer<f32, Arc<ringbuf::HeapRb<f32>>>,
-    meta_state: Arc<Mutex<MetaState>>,
 
     band_levels_l: [f32; NUM_BANDS],
     band_levels_r: [f32; NUM_BANDS],
@@ -262,7 +252,6 @@ impl<'a> AudioApp<'a> {
         animation: KramaFrame<UClassList<1>, UFrameList<'a, 1, u8, TRES16Bits, i16>>,
         cons_l: Consumer<f32, Arc<ringbuf::HeapRb<f32>>>,
         cons_r: Consumer<f32, Arc<ringbuf::HeapRb<f32>>>,
-        meta_state: Arc<Mutex<MetaState>>,
     ) -> Self {
         let mut window_table = Vec::with_capacity(FFT_SIZE);
         for i in 0..FFT_SIZE {
@@ -275,7 +264,6 @@ impl<'a> AudioApp<'a> {
             animation,
             cons_l,
             cons_r,
-            meta_state,
             band_levels_l: [0.0; NUM_BANDS],
             band_levels_r: [0.0; NUM_BANDS],
             band_starts_l: [0.0; NUM_BANDS],

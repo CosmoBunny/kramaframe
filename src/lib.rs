@@ -546,6 +546,13 @@ pub type BTframelist<TRES, PRES> = BTreeMap<&'static str, KeyList<TRES, PRES>>;
 impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<UClassList<N>, UFrameList<'a, N, UN, TRES, PRES>>
 {
+    pub fn change_keyframefunction(&mut self, classname: &'static str, new: KeyFrameFunction) {
+        for (inclass, keyframe) in &mut self.classlist.0 {
+            if *inclass == classname {
+                *keyframe = new;
+            }
+        }
+    }
     pub fn update_progress(&mut self, delta_time: TRES) {
         for item in self.framelist.0.iter_mut() {
             let ukeylists = &mut item.1;
@@ -799,7 +806,9 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
                 for ukeylist in ukeylists.iter_mut() {
-                    ukeylist.is_animating(&id);
+                    if ukeylist.is_animating(&id) {
+                        return true;
+                    }
                 }
                 break;
             }
