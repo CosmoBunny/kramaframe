@@ -546,6 +546,12 @@ pub type BTframelist<TRES, PRES> = BTreeMap<&'static str, KeyList<TRES, PRES>>;
 impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<UClassList<N>, UFrameList<'a, N, UN, TRES, PRES>>
 {
+    /// Changes the keyframe function (easing behavior) for a specific animation class.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.change_keyframefunction("fade_in", KeyFrameFunction::EaseIn);
+    /// ```
     pub fn change_keyframefunction(&mut self, classname: &'static str, new: KeyFrameFunction) {
         for (inclass, keyframe) in &mut self.classlist.0 {
             if *inclass == classname {
@@ -553,6 +559,13 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             }
         }
     }
+
+    /// Updates the progress of all active animations in the frame list based on the provided delta time.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.update_progress(TRES::from_sec(0.016));
+    /// ```
     pub fn update_progress(&mut self, delta_time: TRES) {
         for item in self.framelist.0.iter_mut() {
             let ukeylists = &mut item.1;
@@ -565,7 +578,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
     }
 
-    /// Restarts the progress of a specific animation instance.
+    /// Restarts the progress of a specific animation instance identified by class name and ID.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.restart_progress("button_click", 1);
+    /// ```
     pub fn restart_progress(&mut self, classname: &'static str, id: UN) {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -582,6 +600,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
     }
 
+    /// Retrieves the current progress of an animation instance as a float between 0.0 and 1.0.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let p = krama.get_progress_f32("spinner", 0);
+    /// ```
     pub fn get_progress_f32(&mut self, classname: &'static str, id: UN) -> f32 {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -598,6 +622,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         0.0
     }
 
+    /// Updates the total duration (timing) for a specific animation instance.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.set_timing("slow_move", 5, TRES::from_sec(10.0));
+    /// ```
     pub fn set_timing(&mut self, classname: &'static str, id: UN, timing: TRES) {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -609,6 +639,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
     }
 
+    /// Gets the configured total duration (timing) for a specific animation instance.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let duration = krama.get_timing("move", 1);
+    /// ```
     pub fn get_timing(&mut self, classname: &'static str, id: UN) -> TRES {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -621,6 +657,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         TRES::from_sec(0.0)
     }
 
+    /// Checks if a specific animation instance is currently playing in reverse.
+    ///
+    /// # Example
+    /// ```ignore
+    /// if krama.is_reversed("door", 1) { println!("Closing..."); }
+    /// ```
     pub fn is_reversed(&mut self, classname: &'static str, id: UN) -> bool {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -633,6 +675,14 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         false
     }
 
+    /// Checks if any animation instance across all classes is currently in progress.
+    ///
+    /// # Example
+    /// ```ignore
+    /// if krama.is_any_animation_inprogress() {
+    ///     request_next_frame();
+    /// }
+    /// ```
     pub fn is_any_animation_inprogress(&mut self) -> bool {
         for (_, ukeylists) in &mut self.framelist.0 {
             for ukeylist in ukeylists.iter_mut() {
@@ -644,6 +694,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         false
     }
 
+    /// Gets the current elapsed time in seconds for a specific animation instance.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let seconds = krama.get_time_f32("timer", 1);
+    /// ```
     pub fn get_time_f32(&mut self, classname: &'static str, id: UN) -> f32 {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -656,6 +712,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         0.0
     }
 
+    /// Calculates an interpolated value within a given `Range` based on an animation's progress.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let x_pos = krama.get_value_byrange("move", 1, 0.0..500.0);
+    /// ```
     pub fn get_value_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
     where
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
@@ -684,6 +746,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         range.start
     }
 
+    /// Calculates an interpolated value within a given `RangeInclusive` based on an animation's progress.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let alpha = krama.get_value_byrange_inclusive("fade", 1, 0.0..=1.0);
+    /// ```
     pub fn get_value_byrange_inclusive<T>(
         &mut self,
         classname: &'static str,
@@ -718,6 +786,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         range.start().clone()
     }
 
+    /// Gets an interpolated value for generic types using the `GetValueByGeneric` trait.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let color = krama.get_generic_byrange("recolor", 1, RED..BLUE);
+    /// ```
     pub fn get_generic_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
     where
         T: Copy,
@@ -747,6 +821,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         range.start
     }
 
+    /// Gets an interpolated value for generic types within a `RangeInclusive`.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let pos = krama.get_generic_value_by_rangeinclusive("path", 1, start..=end);
+    /// ```
     pub fn get_generic_value_by_rangeinclusive<T>(
         &mut self,
         classname: &'static str,
@@ -780,6 +860,13 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
         range.start().clone()
     }
+
+    /// Reverses the playback direction of a specific animation instance.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.reverse_animate("toggle", 1);
+    /// ```
     pub fn reverse_animate(&mut self, classname: &'static str, id: UN) {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -791,6 +878,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
     }
 
+    /// Reverses the playback direction and ensures the animation is active.
+    ///
+    /// # Example
+    /// ```ignore
+    /// krama.reverse_start("menu", 1);
+    /// ```
     pub fn reverse_start(&mut self, classname: &'static str, id: UN) {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {
@@ -802,6 +895,12 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         }
     }
 
+    /// Checks if a specific animation instance is currently playing.
+    ///
+    /// # Example
+    /// ```ignore
+    /// if krama.is_animating("logo_spin", 1) { /* ... */ }
+    /// ```
     pub fn is_animating(&mut self, classname: &'static str, id: UN) -> bool {
         for (inclass, ukeylists) in &mut self.framelist.0 {
             if *inclass == classname {

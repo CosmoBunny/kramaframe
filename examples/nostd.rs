@@ -1,4 +1,4 @@
-use kramaframe::{ukramaframe, keylist::{TRES16Bits, TimingResolution}};
+use kramaframe::{keylist::TRES16Bits, ukramaframe};
 
 // This example demonstrates how to use kramaframe in a no_std environment
 // (or simply without heap allocation) using the ukramaframe! macro.
@@ -32,7 +32,7 @@ fn main() {
 
         // Get values for the linear animation (interpolating between 0 and 100)
         let val_linear = krama.get_value_byrange("linear_anim", 1, 0..100);
-        
+
         // Get values for the ease animation (interpolating between 10 and 50)
         let val_ease = krama.get_value_byrange("ease_anim", 3, 10..50);
 
@@ -41,10 +41,10 @@ fn main() {
         let bar_ease = "█".repeat(val_ease as usize / 2);
 
         println!(
-            "Frame {:3}: Linear({:3}) {} | EaseIn({:3}) {}", 
+            "Frame {:3}: Linear({:3}) {} | EaseIn({:3}) {}",
             i, val_linear, bar_linear, val_ease, bar_ease
         );
     }
-    
+
     println!("Finished.");
 }
