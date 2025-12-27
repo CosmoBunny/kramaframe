@@ -23,6 +23,7 @@ use ringbuf::{Consumer, HeapRb, Producer};
 use rustfft::{FftPlanner, num_complex::Complex, num_traits::Zero};
 
 const FFT_SIZE: usize = 2048;
+// Increased bands to 60 for finer resolution
 const NUM_BANDS: usize = 60;
 
 #[derive(Debug)]
@@ -33,56 +34,6 @@ impl std::fmt::Display for StringError {
     }
 }
 impl Error for StringError {}
-
-fn find_monitor_device(host: &cpal::Host) -> Option<cpal::Device> {
-    // Try to find the currently active monitor/loopback device
-
-    // On Linux with PulseAudio/PipeWire, try to match the default sink's monitor
-    #[cfg(target_os = "linux")]
-    {
-        use std::process::Command;
-
-        // Get the default sink name
-        if let Ok(output) = Command::new("pactl").args(&["get-default-sink"]).output() {
-            if output.status.success() {
-                if let Ok(sink) = String::from_utf8(output.stdout) {
-                    let sink = sink.trim();
-                    let monitor_name = format!("{}.monitor", sink);
-
-                    // Try to find device matching this monitor
-                    if let Ok(devices) = host.input_devices() {
-                        for device in devices {
-                            if let Ok(name) = device.name() {
-                                if name.contains(&monitor_name) || name.contains(sink) {
-                                    return Some(device);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback: Find any monitor/loopback device
-    if let Ok(devices) = host.input_devices() {
-        for device in devices {
-            if let Ok(name) = device.name() {
-                let name_lower = name.to_lowercase();
-                // Check for monitor/loopback indicators across all platforms
-                if name_lower.contains("monitor")
-                    || name_lower.contains("loopback")
-                    || name_lower.contains("stereo mix")
-                    || name_lower.contains("what u hear")
-                    || name_lower.contains("wave out")
-                {
-                    return Some(device);
-                }
-            }
-        }
-    }
-    None
-}
 
 fn main() {
     let mut logger = MultiLogger(Instant::now(), ErrorConv);
@@ -95,30 +46,20 @@ fn main() {
         println!("Available Input Devices:");
         if let Ok(devices) = host.input_devices() {
             for (i, device) in devices.enumerate() {
-                println!("{}: {}", i + 1, device.name().unwrap_or("Unknown".into()));
+                println!("{}: {}", i, device.name().unwrap_or("Unknown".into()));
             }
         }
         return;
     }
 
-    // Device selection logic:
-    // No args or 0 = Auto-detect monitor device (like OBS)
-    // 1 = First device, 2 = Second device, etc.
     let device = if args.len() > 1 {
         if let Ok(idx) = args[1].parse::<usize>() {
-            if idx == 0 {
-                // 0 = Auto-detect monitor
-                find_monitor_device(&host)
-            } else {
-                // 1 = first device (index 0), 2 = second (index 1), etc.
-                host.input_devices().ok().and_then(|mut d| d.nth(idx - 1))
-            }
+            host.input_devices().ok().and_then(|mut d| d.nth(idx))
         } else {
             host.default_input_device()
         }
     } else {
-        // Default: Auto-detect monitor device (like OBS)
-        find_monitor_device(&host).or_else(|| host.default_input_device())
+        host.default_input_device()
     };
 
     let device = match device {
@@ -143,6 +84,7 @@ fn main() {
         }
     };
 
+    // LOCK-FREE RING BUFFER setup
     let rb_l = HeapRb::<f32>::new(8192);
     let rb_r = HeapRb::<f32>::new(8192);
     let (prod_l, cons_l) = rb_l.split();
@@ -176,32 +118,27 @@ fn main() {
         return;
     }
 
-    // On Linux with PulseAudio/PipeWire, auto-route to active monitor (like cava does)
+    // Linux-specific: Auto-connect to monitor source if possible
     #[cfg(target_os = "linux")]
     {
         std::thread::spawn(|| {
             std::thread::sleep(Duration::from_millis(500));
-            loop {
-                let _ = std::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(
-                        r#"
-                        # Get the default sink's monitor
-                        DEFAULT_SINK=$(pactl get-default-sink 2>/dev/null)
-                        if [ -n "$DEFAULT_SINK" ]; then
-                            TARGET="${DEFAULT_SINK}.monitor"
-                            
-                            # Move all source outputs to this monitor
-                            pactl list short source-outputs 2>/dev/null | while read -r line; do
-                                STREAM_ID=$(echo "$line" | awk '{print $1}')
-                                pactl move-source-output "$STREAM_ID" "$TARGET" >/dev/null 2>&1
-                            done
-                        fi
-                    "#,
-                    )
-                    .output();
-                std::thread::sleep(Duration::from_secs(2));
-            }
+            let _ = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(
+                    r#"
+                    TARGET=$(pactl list short sources | grep "monitor" | grep "RUNNING" | awk '{print $1}' | head -n 1);
+                    if [ -z "$TARGET" ]; then TARGET=$(pactl list short sources | grep "monitor" | awk '{print $1}' | head -n 1); fi;
+                    
+                    if [ -n "$TARGET" ]; then
+                        pactl list short source-outputs | while read -r line; do
+                            STREAM_ID=$(echo "$line" | awk '{print $1}')
+                            pactl move-source-output "$STREAM_ID" "$TARGET" >/dev/null 2>&1
+                        done
+                    fi
+                "#,
+                )
+                .output();
         });
     }
 
@@ -216,6 +153,8 @@ fn main() {
     );
     let mut terminal = ratatui::init();
 
+    // Single animation class with 140ms default duration
+    // IDs Optimized: Using just ID 0 for global sync to reduce overhead
     let animation = ukramaframe!(<TRES16Bits, i16, u8>
         "viz" EaseOut [0] 0.14 s;
     );
@@ -240,7 +179,7 @@ where
     <T as Sample>::Float: Into<f64>,
 {
     let channels = config.channels as usize;
-    let err_fn = |_err| {}; // Silent error handler
+    let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
 
     let stream = device.build_input_stream(
         config,
@@ -277,6 +216,7 @@ where
 }
 
 struct AudioApp<'a> {
+    // Changed to UClassList<1>
     animation: KramaFrame<UClassList<1>, UFrameList<'a, 1, u8, TRES16Bits, i16>>,
 
     cons_l: Consumer<f32, Arc<ringbuf::HeapRb<f32>>>,
@@ -289,6 +229,7 @@ struct AudioApp<'a> {
     band_targets_l: [f32; NUM_BANDS],
     band_targets_r: [f32; NUM_BANDS],
 
+    // Sampling Average / Temporal Smoothing Buffers
     spectrum_smooth_l: [f32; NUM_BANDS],
     spectrum_smooth_r: [f32; NUM_BANDS],
 
@@ -305,12 +246,13 @@ struct AudioApp<'a> {
     current_easing_index: usize,
     quit: bool,
 
+    // Radiance Effect
     bass_energy: f32,
     radiance_phase: f32,
 
+    // Status
     show_status: bool,
     device_name: String,
-    should_rescan: bool,
 }
 
 impl<'a> AudioApp<'a> {
@@ -350,7 +292,7 @@ impl<'a> AudioApp<'a> {
             raw_buf_l: vec![0.0; FFT_SIZE],
             raw_buf_r: vec![0.0; FFT_SIZE],
 
-            anim_duration_ms: 140,
+            anim_duration_ms: 140, // Default requested
             current_easing_index: 3,
             quit: false,
 
@@ -359,7 +301,6 @@ impl<'a> AudioApp<'a> {
 
             show_status: false,
             device_name,
-            should_rescan: false,
         }
     }
 
@@ -386,10 +327,6 @@ impl<'a> AudioApp<'a> {
                         KeyCode::Char('q') => self.quit = true,
                         KeyCode::Char('s') | KeyCode::Char('S') => {
                             self.show_status = !self.show_status;
-                        }
-                        KeyCode::Char('r') | KeyCode::Char('R') => {
-                            // Signal to rescan device
-                            self.should_rescan = true;
                         }
                         KeyCode::Up => {
                             self.anim_duration_ms =
@@ -466,6 +403,7 @@ impl<'a> AudioApp<'a> {
                     last_tick.elapsed().as_millis() as u16,
                 ));
 
+                // Optimized Animation Logic: Single ID (0) drives global synchronization
                 let p_global = self.animation.get_progress_f32("viz", 0);
                 let mut update_targets = false;
 
@@ -474,15 +412,20 @@ impl<'a> AudioApp<'a> {
                     update_targets = true;
                 }
 
+                // Apply continuous averaging (Temporal Smoothing)
                 for i in 0..NUM_BANDS {
+                    // Running average: 50% history, 50% new data
+                    // This continuously averages the audio for each bar
                     self.spectrum_smooth_l[i] = (self.spectrum_smooth_l[i] + next_fft_l[i]) * 0.5;
                     self.spectrum_smooth_r[i] = (self.spectrum_smooth_r[i] + next_fft_r[i]) * 0.5;
 
+                    // Update next_fft to use smoothed values
                     next_fft_l[i] = self.spectrum_smooth_l[i];
                     next_fft_r[i] = self.spectrum_smooth_r[i];
                 }
 
                 for i in 0..NUM_BANDS {
+                    // Update animation targets only when the global cycle resets
                     if update_targets {
                         self.band_starts_l[i] = self.band_targets_l[i];
                         self.band_targets_l[i] = next_fft_l[i];
@@ -491,6 +434,7 @@ impl<'a> AudioApp<'a> {
                         self.band_targets_r[i] = next_fft_r[i];
                     }
 
+                    // Use global progress (ID 0) for all bands
                     self.band_levels_l[i] = self.animation.get_value_byrange_inclusive(
                         "viz",
                         0,
@@ -504,12 +448,18 @@ impl<'a> AudioApp<'a> {
                     );
                 }
 
+                // --- Radiance Logic ---
+                // Calculate bass energy from the first few bands (approx 0-250Hz)
+                // Since bands are 60 now, take first 8 to cover similar range
                 let bass_sum_l: f32 = self.band_levels_l.iter().take(8).sum();
                 let bass_sum_r: f32 = self.band_levels_r.iter().take(8).sum();
-                let instant_bass = (bass_sum_l + bass_sum_r) / 16.0;
+                let instant_bass = (bass_sum_l + bass_sum_r) / 16.0; // Normalized roughly 0.0-1.0
 
+                // Smooth energy follower
                 self.bass_energy = self.bass_energy * 0.90 + instant_bass * 0.10;
 
+                // Animate phase based on bass energy for sync
+                // Base speed 0.02 + dynamic component
                 let phase_step = 0.02 + (self.bass_energy * 0.20);
                 self.radiance_phase =
                     (self.radiance_phase + phase_step) % (std::f32::consts::PI * 2.0);
@@ -534,10 +484,12 @@ impl<'a> AudioApp<'a> {
         for (_, func) in self.animation.classlist.0.iter_mut() {
             *func = easing;
         }
+        // Update only ID 0
         self.animation.set_timing("viz", 0, t.clone());
     }
 
     fn view(&mut self, f: &mut Frame) {
+        // Full screen visualization, no text widgets
         self.render_merged_viz(f, f.area());
 
         if self.show_status {
@@ -575,14 +527,6 @@ impl<'a> AudioApp<'a> {
             ]),
         ];
 
-        if self.should_rescan {
-            status_text.push(Line::from(""));
-            status_text.push(Line::from(Span::styled(
-                "⚠ Restart app to rescan device",
-                Style::default().fg(Color::Yellow),
-            )));
-        }
-
         status_text.push(Line::from(""));
         status_text.push(Line::from(Span::styled(
             "Press 's' to hide",
@@ -601,7 +545,7 @@ impl<'a> AudioApp<'a> {
             x: area.x + 1,
             y: area.y + 1,
             width: 40.min(area.width.saturating_sub(2)),
-            height: if self.should_rescan { 8 } else { 6 }.min(area.height.saturating_sub(2)),
+            height: 6.min(area.height.saturating_sub(2)),
         };
 
         f.render_widget(status, status_area);
@@ -626,28 +570,38 @@ impl<'a> AudioApp<'a> {
         let total_w = (total_bands as u16 * band_width) + total_gap;
         let start_x = inner.x + (inner.width.saturating_sub(total_w)) / 2;
 
+        // --- Color Gradient Settings ---
+
+        // Base Theme Colors (Edge Color)
         let (end_r, end_g, end_b) = match self.current_easing_index {
-            0 => (0.0, 255.0, 255.0),
-            1 => (255.0, 65.0, 54.0),
-            2 => (147.0, 112.0, 219.0),
-            3 => (255.0, 165.0, 0.0),
-            4 => (255.0, 105.0, 180.0),
-            5 => (80.0, 200.0, 120.0),
-            6 => (255.0, 215.0, 0.0),
-            _ => (94.0, 129.0, 172.0),
+            0 => (0.0, 255.0, 255.0),   // Linear: Cyan
+            1 => (255.0, 65.0, 54.0),   // Ease: Red (Aurora Red)
+            2 => (147.0, 112.0, 219.0), // EaseIn: MediumPurple
+            3 => (255.0, 165.0, 0.0),   // EaseOut: Orange
+            4 => (255.0, 105.0, 180.0), // EaseInOut: HotPink
+            5 => (80.0, 200.0, 120.0),  // Quadratic: Emerald Green
+            6 => (255.0, 215.0, 0.0),   // Gravity: Gold
+            _ => (94.0, 129.0, 172.0),  // Fallback: Nord Blue
         };
 
+        // Radiance Calculation
         let radiance = (self.bass_energy * 2.5).clamp(0.0, 1.0).powf(1.5);
+
+        // Logic:
+        // Low Bass: Center color matches Edge color (Solid look, no white)
+        // High Bass: Center color becomes White and spreads outwards
 
         let mut start_r = end_r;
         let mut start_g = end_g;
         let mut start_b = end_b;
 
+        // Only add white center if radiance is significant (insane bass)
         if radiance > 0.15 {
             let target_r = 255.0;
             let target_g = 255.0;
             let target_b = 255.0;
 
+            // Blend to white based on radiance intensity
             let blend = ((radiance - 0.15) / 0.85).clamp(0.0, 1.0);
 
             start_r = start_r + (target_r - start_r) * blend;
@@ -655,6 +609,10 @@ impl<'a> AudioApp<'a> {
             start_b = start_b + (target_b - start_b) * blend;
         }
 
+        // Spread Factor:
+        // Higher power = remains close to 0 (Center/Start Color) longer.
+        // This makes the "White" (if active) spread out from the center.
+        // User requested multiplier to be 0.5
         let spread_power = 1.0 + (radiance * 0.5);
 
         for j in 0..total_bands {
@@ -669,6 +627,8 @@ impl<'a> AudioApp<'a> {
             let val = levels[source_idx];
             let ratio = source_idx as f32 / (NUM_BANDS - 1) as f32;
 
+            // Interpolate Color: Center -> Edge
+            // warp goes from 0 (Center) to 1 (Edge)
             let warp = ratio.powf(spread_power);
 
             let r = (start_r + (end_r - start_r) * warp) as u8;
@@ -726,17 +686,20 @@ impl<'a> AudioApp<'a> {
 }
 
 fn process_fft_bands(fft_output: &[Complex<f32>], bands: &mut [f32]) {
-    let num_bins = fft_output.len() / 2;
-    let log_min = 1.0f32.ln();
+    // Logarithmic mapping constants for smoother grouping
+    let num_bins = fft_output.len() / 2; // ~1024
+    let log_min = 1.0f32.ln(); // Start at bin 1
     let log_max = (num_bins as f32).ln();
 
     for i in 0..NUM_BANDS {
+        // Calculate logarithmic range for this band
         let log_start = log_min + (log_max - log_min) * (i as f32 / NUM_BANDS as f32);
         let log_end = log_min + (log_max - log_min) * ((i + 1) as f32 / NUM_BANDS as f32);
 
         let mut start_bin = log_start.exp() as usize;
         let mut end_bin = log_end.exp() as usize;
 
+        // Ensure strictly monotonic and bounds
         start_bin = start_bin.max(1).min(num_bins - 1);
         end_bin = end_bin.max(start_bin + 1).min(num_bins);
 
@@ -745,11 +708,15 @@ fn process_fft_bands(fft_output: &[Complex<f32>], bands: &mut [f32]) {
 
         for bin_idx in start_bin..end_bin {
             if bin_idx < fft_output.len() {
+                // Sum of magnitudes
                 sum_amp += fft_output[bin_idx].norm();
             }
         }
 
+        // Average the magnitude ("average bar")
         let avg_amp = if count > 0.0 { sum_amp / count } else { 0.0 };
+
+        // Apply slight frequency skew boost for higher frequencies
         let freq_skew = 1.0 + (i as f32 / NUM_BANDS as f32) * 2.5;
 
         let display_val = (avg_amp * freq_skew / 100.0).clamp(0.0, 1.0);
