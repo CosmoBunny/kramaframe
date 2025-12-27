@@ -1115,3 +1115,79 @@ macro_rules! count {
         1 + $crate::count!($($tail),*)
     };
 }
+
+/// Creates a `KramaFrame` instance initialized with `BTreeMap` storage (Heap allocated).
+///
+/// This macro provides a convenient, declarative syntax for initializing a `KramaFrame` that uses
+/// `BTreeMap` (standard library). It mimics the syntax of `ukramaframe!` but constructs the maps dynamically.
+///
+/// Requires the `std` feature (implied by usage of `BTreeMap`).
+///
+/// ### Syntax
+///
+/// ```text
+/// btkramaframe!(
+///     <TRES, PRES>
+///     "class_name" EasingFunction [key_id1, key_id2, ...] duration s ;
+///     ...
+/// );
+/// ```
+///
+/// - `TRES`, `PRES`: Timing and Progress resolution types.
+/// - IDs are strictly `u32` for `BTreeMap` implementation.
+///
+/// ### Example
+///
+/// ```ignore
+/// let mut anim = btkramaframe!(
+///     <u32, i32>
+///     "fade" EaseIn [1, 2] 1.0 s;
+///     "slide" Linear [10] 2.5 s;
+/// );
+/// ```
+#[cfg(not(feature = "no_std"))]
+#[macro_export]
+macro_rules! btkramaframe {
+    // Multiple entries
+    (<$TRES:ty, $PRES:ty>
+        $(
+            $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ;
+        )+
+    ) => {{
+        let mut krama = $crate::KramaFrame::<
+            std::collections::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
+            std::collections::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
+        >::default();
+
+        $(
+             krama.classlist.insert($class, $crate::keyframe::KeyFrameFunction::$easing);
+             $(
+                krama.insert_new_id(
+                    $class,
+                    $key as u32,
+                    <$TRES as $crate::keylist::TimingResolution>::from_sec($duration as f32)
+                );
+             )*
+        )+
+
+        krama
+    }};
+
+    // Single entry (convenience for no trailing semicolon)
+    (<$TRES:ty, $PRES:ty> $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ) => {{
+        let mut krama = $crate::KramaFrame::<
+            std::collections::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
+            std::collections::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
+        >::default();
+
+        krama.classlist.insert($class, $crate::keyframe::KeyFrameFunction::$easing);
+        $(
+            krama.insert_new_id(
+                $class,
+                $key as u32,
+                <$TRES as $crate::keylist::TimingResolution>::from_sec($duration as f32)
+            );
+        )*
+        krama
+    }};
+}

@@ -1,5 +1,6 @@
 #[test]
 fn test_macros() {
+    use crate::btkramaframe;
     use crate::keylist::TRES16Bits;
     use crate::ukramaframe;
 
@@ -12,6 +13,11 @@ fn test_macros() {
         "button" EaseIn [1,2,3,4,5,6] 1 s;
         "menu" EaseIn [1,2,3,4,5,6] 1 s;
         "dropdown" EaseIn [1,2,3,4,5,6] 1 s;
+    );
+
+    let _u1_big = btkramaframe!(
+        <u32, i32>
+        "button" EaseIn [1,3,4] 2.0 s;
     );
     assert!(true);
 }
