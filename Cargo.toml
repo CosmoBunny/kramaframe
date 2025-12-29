@@ -10,9 +10,12 @@ keywords = ["animation", "keyframe", "easing", "tweening", "timeline"]
 categories = ["multimedia::images", "game-development"]
 
 [features]
-no_std = []
+no_std = ["dep:libm"]
 alloc = []
 default = []
+
+[dependencies]
+libm = { version = "0.2", optional = true }
 
 [dev-dependencies]
 ratatui = { version = "0.29.0" }

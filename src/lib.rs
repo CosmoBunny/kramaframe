@@ -1,15 +1,25 @@
+#![cfg_attr(feature = "no_std", no_std)]
+
+#[cfg(all(feature = "no_std", feature = "alloc"))]
+extern crate alloc;
+
+#[cfg(all(feature = "no_std", feature = "alloc"))]
+pub use alloc::collections::BTreeMap;
+
 #[cfg(not(feature = "no_std"))]
-use std::{
-    collections::BTreeMap,
-    ops::{Range, RangeInclusive},
-};
+pub use std::collections::BTreeMap;
+
+use core::ops::{Range, RangeInclusive};
 
 use crate::{
     keyframe::KeyFrameFunction,
-    keylist::{GetValueByGeneric, GetValueByRange, KeyList, ProgressResolution, TimingResolution},
+    keylist::{GetValueByGeneric, GetValueByRange, ProgressResolution, TimingResolution},
     microcl::UClassList,
     microfl::UFrameList,
 };
+
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+use crate::keylist::KeyList;
 
 // For non-alloc and no_std
 pub mod microcl;
@@ -19,8 +29,10 @@ pub mod test;
 pub mod prelude {
     pub use crate::keyframe::KeyFrameFunction;
     pub use crate::keylist::{
-        GetValueByGeneric, GetValueByRange, KeyList, ProgressResolution, TimingResolution,
+        GetValueByGeneric, GetValueByRange, ProgressResolution, TimingResolution,
     };
+    #[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+    pub use crate::keylist::KeyList;
 }
 
 /// Provides the keyframe functions used for animation easing.
@@ -43,7 +55,7 @@ pub struct KramaFrame<CL, FL> {
     pub framelist: FL,
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KramaFrame<BTreeMap<&'static str, KeyFrameFunction>, BTframelist<TRES, PRES>>
 {
@@ -56,7 +68,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<BTclasslist, BTreeMap<&'static str, KeyList<TRES, PRES>>>
 {
@@ -539,8 +551,10 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
 }
 
 /// A type alias for a class list implemented with `BTreeMap`.
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 pub type BTclasslist = BTreeMap<&'static str, KeyFrameFunction>;
 /// A type alias for a frame list implemented with `BTreeMap`.
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 pub type BTframelist<TRES, PRES> = BTreeMap<&'static str, KeyList<TRES, PRES>>;
 
 impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
@@ -1145,7 +1159,7 @@ macro_rules! count {
 ///     "slide" Linear [10] 2.5 s;
 /// );
 /// ```
-#[cfg(not(feature = "no_std"))]
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 #[macro_export]
 macro_rules! btkramaframe {
     // Multiple entries
@@ -1155,8 +1169,8 @@ macro_rules! btkramaframe {
         )+
     ) => {{
         let mut krama = $crate::KramaFrame::<
-            std::collections::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
-            std::collections::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
+            $crate::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
+            $crate::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
         >::default();
 
         $(
@@ -1176,8 +1190,8 @@ macro_rules! btkramaframe {
     // Single entry (convenience for no trailing semicolon)
     (<$TRES:ty, $PRES:ty> $class:literal $easing:ident [ $($key:literal),* $(,)? ] $duration:literal s ) => {{
         let mut krama = $crate::KramaFrame::<
-            std::collections::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
-            std::collections::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
+            $crate::BTreeMap<&'static str, $crate::keyframe::KeyFrameFunction>,
+            $crate::BTreeMap<&'static str, $crate::keylist::KeyList<$TRES, $PRES>>
         >::default();
 
         krama.classlist.insert($class, $crate::keyframe::KeyFrameFunction::$easing);

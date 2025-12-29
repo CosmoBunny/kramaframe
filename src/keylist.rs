@@ -1,7 +1,10 @@
-use std::{
-    collections::BTreeMap,
-    ops::{Add, Mul, Neg, Range, RangeInclusive, Sub},
-};
+#[cfg(all(feature = "no_std", feature = "alloc"))]
+use alloc::{collections::BTreeMap, vec::Vec};
+
+#[cfg(not(feature = "no_std"))]
+use std::{collections::BTreeMap, vec::Vec};
+
+use core::ops::{Add, Mul, Neg, Range, RangeInclusive, Sub};
 
 use crate::keyframe::KeyFrameFunction;
 
@@ -76,6 +79,7 @@ macro_rules! interpolate_range_common {
 List of Progress is stored by ID. Each specific ID has a specific timing and different progress.
 
 */
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 pub struct KeyList<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> {
     progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
 }
@@ -165,6 +169,7 @@ impl<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     }
 }
 
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KeyList<TRES, PRES>
 {
@@ -177,6 +182,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
 
 // From Array that create new KeyList.
 // Example: [400,500,800,400] each array index become id and it's element become timing.
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> From<Vec<TRES>>
     for KeyList<TRES, PRES>
 {
@@ -189,6 +195,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> From<Vec<TRE
     }
 }
 // Slice also
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq, const N: usize> From<[TRES; N]>
     for KeyList<TRES, PRES>
 {
@@ -201,6 +208,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq, const N: usi
     }
 }
 
+#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> KeyList<TRES, PRES> {
     pub fn get_progresses(&self) -> &BTreeMap<u32, ProgressList<TRES, PRES>> {
         &self.progresses
