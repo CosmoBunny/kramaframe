@@ -1,18 +1,6 @@
 use kramaframe::{keylist::TRES16Bits, ukramaframe};
 
-// This example demonstrates how to use kramaframe in a no_std environment
-// (or simply without heap allocation) using the ukramaframe! macro.
-// While this example itself uses std (for println!), the KramaFrame usage
-// is strictly stack-allocated and compatible with no_std.
-
 fn main() {
-    // Define a KramaFrame with stack-allocated storage.
-    // We use TRES16Bits for timing and i16 for progress resolution.
-    // The macro initializes the structure with the given classes, easing functions,
-    // key IDs, and durations.
-    //
-    // "linear_anim" uses Linear easing, has keys [1, 2], and lasts 2.0 seconds.
-    // "ease_anim" uses EaseIn easing, has keys [3], and lasts 1.5 seconds.
     let mut krama = ukramaframe!(<TRES16Bits, i16, u32>
         "linear_anim" Linear [1, 2] 2.0 s;
         "ease_anim"   EaseIn [3]    1.5 s;

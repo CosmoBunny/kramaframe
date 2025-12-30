@@ -5,7 +5,7 @@ use kramaframe::{btkramaframe, keylist::TRES32Bits};
 // This allows using BTreeMap-based KramaFrame (heap allocated) even without std.
 //
 // To run this check (simulated no_std):
-// cargo run --example alloc_nostd --no-default-features --features no_std,alloc
+// cargo run --example alloc_nostd --no-default-features --features alloc
 //
 // Note: This example uses println! which is from std, but the KramaFrame usage
 // relies on alloc::collections::BTreeMap when configured with no_std + alloc.

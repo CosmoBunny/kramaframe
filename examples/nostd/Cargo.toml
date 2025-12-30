@@ -1,0 +1,7 @@
+[package]
+name = "nostd"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+kramaframe = {path = "../../", default-features = false, features = ["alloc"]}

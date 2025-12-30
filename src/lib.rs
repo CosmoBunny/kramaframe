@@ -1,12 +1,12 @@
-#![cfg_attr(feature = "no_std", no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(all(feature = "no_std", feature = "alloc"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc;
 
-#[cfg(all(feature = "no_std", feature = "alloc"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 pub use alloc::collections::BTreeMap;
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 pub use std::collections::BTreeMap;
 
 use core::ops::{Range, RangeInclusive};
@@ -18,7 +18,7 @@ use crate::{
     microfl::UFrameList,
 };
 
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 use crate::keylist::KeyList;
 
 // For non-alloc and no_std
@@ -31,7 +31,7 @@ pub mod prelude {
     pub use crate::keylist::{
         GetValueByGeneric, GetValueByRange, ProgressResolution, TimingResolution,
     };
-    #[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     pub use crate::keylist::KeyList;
 }
 
@@ -55,7 +55,7 @@ pub struct KramaFrame<CL, FL> {
     pub framelist: FL,
 }
 
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KramaFrame<BTreeMap<&'static str, KeyFrameFunction>, BTframelist<TRES, PRES>>
 {
@@ -68,7 +68,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     }
 }
 
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     KramaFrame<BTclasslist, BTreeMap<&'static str, KeyList<TRES, PRES>>>
 {
@@ -551,10 +551,10 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
 }
 
 /// A type alias for a class list implemented with `BTreeMap`.
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub type BTclasslist = BTreeMap<&'static str, KeyFrameFunction>;
 /// A type alias for a frame list implemented with `BTreeMap`.
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub type BTframelist<TRES, PRES> = BTreeMap<&'static str, KeyList<TRES, PRES>>;
 
 impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
@@ -1135,7 +1135,7 @@ macro_rules! count {
 /// This macro provides a convenient, declarative syntax for initializing a `KramaFrame` that uses
 /// `BTreeMap` (standard library). It mimics the syntax of `ukramaframe!` but constructs the maps dynamically.
 ///
-/// Requires the `std` feature (implied by usage of `BTreeMap`).
+/// Requires the `std` or `alloc` feature (implied by usage of `BTreeMap`).
 ///
 /// ### Syntax
 ///
@@ -1159,7 +1159,7 @@ macro_rules! count {
 ///     "slide" Linear [10] 2.5 s;
 /// );
 /// ```
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 #[macro_export]
 macro_rules! btkramaframe {
     // Multiple entries

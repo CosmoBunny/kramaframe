@@ -1,7 +1,9 @@
-#[cfg(all(feature = "no_std", feature = "alloc"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::{collections::BTreeMap, vec::Vec};
+#[cfg(not(feature = "std"))]
+use libm::{floorf, roundf};
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 use std::{collections::BTreeMap, vec::Vec};
 
 use core::ops::{Add, Mul, Neg, Range, RangeInclusive, Sub};
@@ -79,7 +81,7 @@ macro_rules! interpolate_range_common {
 List of Progress is stored by ID. Each specific ID has a specific timing and different progress.
 
 */
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub struct KeyList<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> {
     progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
 }
@@ -169,7 +171,7 @@ impl<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
     }
 }
 
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
     for KeyList<TRES, PRES>
 {
@@ -182,7 +184,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> Default
 
 // From Array that create new KeyList.
 // Example: [400,500,800,400] each array index become id and it's element become timing.
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> From<Vec<TRES>>
     for KeyList<TRES, PRES>
 {
@@ -195,7 +197,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> From<Vec<TRE
     }
 }
 // Slice also
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq, const N: usize> From<[TRES; N]>
     for KeyList<TRES, PRES>
 {
@@ -208,7 +210,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq, const N: usi
     }
 }
 
-#[cfg(any(not(feature = "no_std"), feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> KeyList<TRES, PRES> {
     pub fn get_progresses(&self) -> &BTreeMap<u32, ProgressList<TRES, PRES>> {
         &self.progresses
@@ -435,7 +437,11 @@ where
                 let x = self.progress_for_x(progress);
                 let step = (*step as f32).max(1.0);
 
+                #[cfg(feature = "std")]
                 let stepped_progress = ((x * step).floor() / step).min(1.0);
+
+                #[cfg(not(feature = "std"))]
+                let stepped_progress = (floorf(x * step) / step).min(1.0);
 
                 interpolate_range_common!(self, range, stepped_progress)
             }
@@ -485,7 +491,12 @@ where
             KeyFrameFunction::Steps(step) => {
                 let step = (*step as f32).max(1.0);
                 let x = self.progress_for_x(progress);
+
+                #[cfg(feature = "std")]
                 let stepped_progress = ((x * step).floor() / step).min(1.0);
+
+                #[cfg(not(feature = "std"))]
+                let stepped_progress = (floorf(x * step) / step).min(1.0);
 
                 interpolate_range_common!(self, =, range, stepped_progress)
             }
@@ -549,7 +560,11 @@ macro_rules! impl_get_value_by_range {
                         let step = (*step as f32).max(1.0);
                         let x = self.progress_for_x(progress);
 
+                        #[cfg(feature = "std")]
                         let stepped_progress = ((x * step).floor() / step).min(1.0);
+
+                        #[cfg(not(feature = "std"))]
+                        let stepped_progress = (floorf(x * step) / step).min(1.0);
 
                         interpolate_range_common!(self, range, stepped_progress, as $t)
                     }
@@ -601,7 +616,11 @@ macro_rules! impl_get_value_by_range {
                         let x = self.progress_for_x(progress);
                         let step = (*step as f32).max(1.0);
 
+                        #[cfg(feature = "std")]
                         let stepped_progress = ((x * step).floor() / step).min(1.0);
+
+                        #[cfg(not(feature = "std"))]
+                        let stepped_progress = (floorf(x * step) / step).min(1.0);
 
                         interpolate_range_common!(self, =, range, stepped_progress, as $t)
                     }
@@ -821,8 +840,13 @@ macro_rules! impl_progress_resolution {
                     *self as f32 / <$t>::MAX as f32
                 }
             }
+            #[cfg(feature = "std")]
             fn from_f32(value: f32) -> Self {
                 (value * <$t>::MAX as f32).round() as $t
+            }
+            #[cfg(not(feature = "std"))]
+            fn from_f32(value: f32) -> Self {
+                roundf(value * <$t>::MAX as f32) as $t
             }
             fn zero() -> Self {
                 0
@@ -858,6 +882,7 @@ impl_progress_resolution!(i16);
 impl_progress_resolution!(i32);
 impl_progress_resolution!(i64);
 
+#[cfg(feature = "std")]
 fn cubic_bezier_y(x: f32, x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
     // Solve for t in x(t) = x using Newton-Raphson
     let mut t = 0.5;
@@ -870,4 +895,19 @@ fn cubic_bezier_y(x: f32, x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
         t = t.clamp(0.0, 1.0);
     }
     3.0 * y1 * t * (1.0 - t).powi(2) + 3.0 * y2 * t.powi(2) * (1.0 - t) + t.powi(3)
+}
+
+#[cfg(not(feature = "std"))]
+fn cubic_bezier_y(x: f32, x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
+    // Solve for t in x(t) = x using Newton-Raphson
+    let mut t = 0.5;
+    for _ in 0..20 {
+        let xt = 3.0 * x1 * t * (1.0 - t) * (1.0 - t) + 3.0 * x2 * t * t * (1.0 - t) + t * t * t;
+        let dxt = 3.0 * (1.0 - t) * (1.0 - t) * x1
+            + 6.0 * t * (1.0 - t) * (x2 - x1)
+            + 3.0 * t * t * (1.0 - x2);
+        t -= (xt - x) / dxt.max(1e-6);
+        t = t.clamp(0.0, 1.0);
+    }
+    3.0 * y1 * t * (1.0 - t) * (1.0 - t) + 3.0 * y2 * t * t * t * (1.0 - t) + t * t * t
 }
