@@ -147,6 +147,10 @@ You can find more detailed examples in the `/examples` directory of the reposito
 
 https://github.com/user-attachments/assets/965e693f-8cdc-4165-81b5-4c0ef38c1f4a
 
+* `kramaviz.rs`: A higly efficient Visualizer sync with fluid animation. This Visualizer use less CPU and less memory than cava. where cava randomly flicker whereas kramaviz won't.
+
+https://github.com/user-attachments/assets/f2d1cea2-bc01-4e55-860c-7179a6c4351a
+
 ## License
 
 This project is licensed under
