@@ -882,32 +882,34 @@ impl_progress_resolution!(i16);
 impl_progress_resolution!(i32);
 impl_progress_resolution!(i64);
 
-#[cfg(feature = "std")]
 fn cubic_bezier_y(x: f32, x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
-    // Solve for t in x(t) = x using Newton-Raphson
-    let mut t = 0.5;
-    for _ in 0..20 {
-        let xt = 3.0 * x1 * t * (1.0 - t).powi(2) + 3.0 * x2 * t.powi(2) * (1.0 - t) + t.powi(3);
-        let dxt = 3.0 * (1.0 - t).powi(2) * x1
-            + 6.0 * t * (1.0 - t) * (x2 - x1)
-            + 3.0 * t.powi(2) * (1.0 - x2);
-        t -= (xt - x) / dxt.max(1e-6);
-        t = t.clamp(0.0, 1.0);
-    }
-    3.0 * y1 * t * (1.0 - t).powi(2) + 3.0 * y2 * t.powi(2) * (1.0 - t) + t.powi(3)
-}
+    let t_guess = if (x2 - x1).abs() > 1e-6 {
+        ((x - x1) / (x2 - x1)).clamp(0.0, 1.0)
+    } else {
+        x.clamp(0.0, 1.0)
+    };
 
-#[cfg(not(feature = "std"))]
-fn cubic_bezier_y(x: f32, x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
-    // Solve for t in x(t) = x using Newton-Raphson
-    let mut t = 0.5;
-    for _ in 0..20 {
-        let xt = 3.0 * x1 * t * (1.0 - t) * (1.0 - t) + 3.0 * x2 * t * t * (1.0 - t) + t * t * t;
-        let dxt = 3.0 * (1.0 - t) * (1.0 - t) * x1
-            + 6.0 * t * (1.0 - t) * (x2 - x1)
-            + 3.0 * t * t * (1.0 - x2);
-        t -= (xt - x) / dxt.max(1e-6);
+    let mut t = t_guess;
+
+    for _ in 0..10 {
+        let one_minus_t = 1.0 - t;
+        let t2 = t * t;
+        let one_mt2 = one_minus_t * one_minus_t;
+
+        let xt = 3.0 * x1 * t * one_mt2 + 3.0 * x2 * t2 * one_minus_t + t2 * t;
+        let error = xt - x;
+
+        if error.abs() < 1e-5 {
+            break;
+        }
+
+        let dxt = 3.0 * one_mt2 * x1 + 6.0 * t * one_minus_t * (x2 - x1) + 3.0 * t2 * (1.0 - x2);
+        t -= error / dxt.max(1e-6);
         t = t.clamp(0.0, 1.0);
     }
-    3.0 * y1 * t * (1.0 - t) * (1.0 - t) + 3.0 * y2 * t * t * t * (1.0 - t) + t * t * t
+
+    let one_minus_t = 1.0 - t;
+    let t2 = t * t;
+    let one_mt2 = one_minus_t * one_minus_t;
+    3.0 * y1 * t * one_mt2 + 3.0 * y2 * t2 * one_minus_t + t2 * t
 }
