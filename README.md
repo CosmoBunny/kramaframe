@@ -161,6 +161,7 @@ use kramaframe::btkramaframe;
 
 // Uses default BTreeMap storage
 let mut krama = btkramaframe!(
+     <u32, i32>
     "move"   EaseInOut [10, 20] 0.5 s;
     "fade"   Linear    [1]      1.0 s;
 );
