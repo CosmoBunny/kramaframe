@@ -131,6 +131,45 @@ let easein_val = kramaframe.get_value_byrange("easein", 1, 0..100);
 println!("Linear: {}, EaseIn: {}", linear_val, easein_val);
 ```
 
+## Macros
+
+`KramaFrame` provides convenient macros for initializing animation sets using a concise syntax.
+
+### `ukramaframe!` (Stack-allocated)
+
+The `ukramaframe!` macro is designed for `no_std` environments or scenarios where you want stack-allocated storage (using `UClassList` and `UFrameList`). It requires explicit type parameters for Time Resolution (`TRES`), Progress (`PRES`), and ID type.
+
+```rust
+use kramaframe::{keylist::TRES16Bits, ukramaframe};
+
+// Syntax: <TRES, PRES, ID_TYPE> "class" Function [ID1, ID2] Duration Unit;
+let mut krama = ukramaframe!(<TRES16Bits, i16, u32>
+    "linear_anim" Linear [1, 2] 2.0 s;
+    "ease_anim"   EaseIn [3]    1.5 s;
+);
+
+// Start an animation
+krama.restart_progress("linear_anim", 1);
+```
+
+### `btkramaframe!` (Heap-allocated)
+
+The `btkramaframe!` macro creates a `KramaFrame` using `BTreeMap` for its internal storage. This is the preferred choice for general-purpose applications using `std` or `alloc` where the number of animations may vary.
+
+```rust
+use kramaframe::btkramaframe;
+
+// Uses default BTreeMap storage
+let mut krama = btkramaframe!(
+    "move"   EaseInOut [10, 20] 0.5 s;
+    "fade"   Linear    [1]      1.0 s;
+);
+
+// Update and retrieve value
+krama.update_progress(0.016); // 16ms delta
+let val = krama.get_value_byrange("move", 10, 0..100);
+```
+
 ## More Examples
 
 You can find more detailed examples in the `/examples` directory of the repository:
