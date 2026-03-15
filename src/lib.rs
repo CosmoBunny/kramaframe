@@ -232,9 +232,8 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         0.0
     }
 
-    /// Gets the interpolated value for a specific animation instance within a given `Range`.
-    ///
-    /// The interpolation is based on the animation's current progress and its class's `KeyFrameFunction`.
+    /// rangebounded interpolated to get value from range bound such as start..end, start..=end, ..end and ..=end
+    /// but it return default value if range is start.., .., =.. and start=..
     pub fn from_range<T>(
         &self,
         on_classname: &'static str,
@@ -317,7 +316,8 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         }
         range.start().clone()
     }
-
+    /// rangebounded interpolated to get value from range bound such as start..end, start..=end, ..end and ..=end
+    /// but it return default value if range is start.., .., =.. and start=..
     pub fn from_range_generic<T>(
         &self,
         on_classname: &'static str,
@@ -794,6 +794,8 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         0.0
     }
 
+    /// rangebounded interpolated to get value from range bound such as start..end, start..=end, ..end and ..=end
+    /// but it return default value if range is start.., .., =.. and start=..
     pub fn from_range<T>(&self, on_classname: &'static str, id: UN, range: impl RangeBounds<T>) -> T
     where
         T: Clone + Default,
@@ -890,6 +892,8 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         range.start().clone()
     }
 
+    /// rangebounded interpolated to get generic value from range bound such as start..end, start..=end, ..end and ..=end
+    /// but it return default value if range is start.., .., =.. and start=..
     pub fn from_range_generic<T>(
         &self,
         on_classname: &'static str,
