@@ -186,12 +186,15 @@ impl AnimationRack {
         // Header should have Two Div with Single height.
         let divider = Layout::new(
             Direction::Vertical,
-            [Constraint::Length(2), Constraint::Length(height - 2)],
+            [
+                Constraint::Length(2),
+                Constraint::Length(height.saturating_sub(2)),
+            ],
         );
         let header = Layout::new(
             Direction::Horizontal,
             [
-                Constraint::Length(width - lag_label.len() as u16),
+                Constraint::Length(width.saturating_sub(lag_label.len() as u16)),
                 Constraint::Length(lag_label.len() as u16 + 1),
             ],
         );
@@ -207,7 +210,7 @@ impl AnimationRack {
         let main_layout = Layout::new(
             Direction::Horizontal,
             [
-                Constraint::Length(width - menu_length),
+                Constraint::Length(width.saturating_sub(menu_length)),
                 Constraint::Length(menu_length),
             ],
         );
@@ -340,7 +343,7 @@ impl AnimationRack {
                     .set_timing(self.tab.current(), 0, TRES16Bits(timing));
             }
             Message::Decrement => {
-                let timing = self.animation.get_timing(self.tab.current(), 0).0 - 1;
+                let timing = self.animation.get_timing(self.tab.current(), 0).0.saturating_sub(1);
                 self.animation
                     .set_timing(self.tab.current(), 0, TRES16Bits(timing));
             }
@@ -435,11 +438,11 @@ impl Widget for Container {
         let page_layout = Layout::new(
             Direction::Horizontal,
             [
-                Constraint::Length(area.width - text_width),
+                Constraint::Length(area.width.saturating_sub(text_width)),
                 Constraint::Length(text_width),
             ],
         );
-        let fill = (area.height - 2) as f32 * self.slide;
+        let fill = (area.height.saturating_sub(2)) as f32 * self.slide;
 
         // █▇▆▅▄▃▂  10/8 = 1.25
         // 10   -> █
@@ -479,7 +482,10 @@ impl Widget for Container {
 
         let material = Layout::new(
             Direction::Horizontal,
-            [Constraint::Length(6), Constraint::Length(page[0].width - 6)],
+            [
+                Constraint::Length(6),
+                Constraint::Length(page[0].width.saturating_sub(6)),
+            ],
         )
         .split(page[0]);
         // fill empty remaining space
