@@ -83,7 +83,7 @@ List of Progress is stored by ID. Each specific ID has a specific timing and dif
 */
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct KeyList<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> {
-    progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
+    pub(crate) progresses: BTreeMap<u32, ProgressList<TRES, PRES>>,
 }
 
 pub struct MicroKeyList<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>(

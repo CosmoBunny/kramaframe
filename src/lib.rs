@@ -10,6 +10,8 @@ pub use alloc::collections::BTreeMap;
 pub use std::collections::BTreeMap;
 
 use core::ops::{Range, RangeInclusive};
+#[cfg(any(feature = "std", feature = "alloc"))]
+use std::ops::RangeBounds;
 
 use crate::{
     keyframe::KeyFrameFunction,
@@ -28,11 +30,11 @@ pub mod microfl;
 pub mod test;
 pub mod prelude {
     pub use crate::keyframe::KeyFrameFunction;
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    pub use crate::keylist::KeyList;
     pub use crate::keylist::{
         GetValueByGeneric, GetValueByRange, ProgressResolution, TimingResolution,
     };
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    pub use crate::keylist::KeyList;
 }
 
 /// Provides the keyframe functions used for animation easing.
@@ -230,6 +232,46 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         0.0
     }
 
+    /// Gets the interpolated value for a specific animation instance within a given `Range`.
+    ///
+    /// The interpolation is based on the animation's current progress and its class's `KeyFrameFunction`.
+    pub fn from_range<T>(
+        &self,
+        on_classname: &'static str,
+        id: u32,
+        range: impl RangeBounds<T>,
+    ) -> T
+    where
+        T: Clone + Default,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
+    {
+        match (range.start_bound(), range.end_bound()) {
+            (std::ops::Bound::Included(start), std::ops::Bound::Included(end)) => {
+                self.get_value_byrange_inclusive(on_classname, id, start.clone()..=end.clone())
+            }
+            (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end)) => {
+                self.get_value_byrange(on_classname, id, start.clone()..end.clone())
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Included(end)) => {
+                self.get_value_byrange_inclusive(on_classname, id, T::default()..=end.clone())
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(end)) => {
+                self.get_value_byrange(on_classname, id, T::default()..end.clone())
+            }
+            _ => T::default(),
+        }
+    }
+
+    pub fn is_classname(&self, classname: &'static str) -> bool {
+        self.classlist.contains_key(classname)
+    }
+
+    pub fn is_id(&self, on_classname: &'static str, id: u32) -> bool {
+        self.framelist
+            .get(on_classname)
+            .map_or(false, |keylist| keylist.progresses.contains_key(&id))
+    }
+
     /// Calculates and returns an interpolated value for an animation within a given `Range`.
     ///
     /// The interpolation is based on the animation's current progress and its class's `KeyFrameFunction`.
@@ -275,6 +317,32 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         }
         range.start().clone()
     }
+
+    pub fn from_range_generic<T>(
+        &self,
+        on_classname: &'static str,
+        id: u32,
+        range: impl RangeBounds<T>,
+    ) -> T
+    where
+        T: Default + Clone + Copy,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
+    {
+        match (range.start_bound(), range.end_bound()) {
+            (std::ops::Bound::Included(start), std::ops::Bound::Included(end)) => self
+                .get_generic_value_by_rangeinclusive(on_classname, id, start.clone()..=end.clone()),
+            (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end)) => {
+                self.get_generic_byrange(on_classname, id, start.clone()..end.clone())
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Included(end)) => self
+                .get_generic_value_by_rangeinclusive(on_classname, id, T::default()..=end.clone()),
+            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(end)) => {
+                self.get_generic_byrange(on_classname, id, T::default()..end.clone())
+            }
+            _ => T::default(),
+        }
+    }
+
     /**
      Gets a value from a `Range` based on animation progress, for generic types.
 
@@ -726,13 +794,35 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         0.0
     }
 
+    pub fn from_range<T>(&self, on_classname: &'static str, id: UN, range: impl RangeBounds<T>) -> T
+    where
+        T: Clone + Default,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
+    {
+        match (range.start_bound(), range.end_bound()) {
+            (core::ops::Bound::Included(start), core::ops::Bound::Included(end)) => {
+                self.get_value_byrange_inclusive(on_classname, id, start.clone()..=end.clone())
+            }
+            (core::ops::Bound::Included(start), core::ops::Bound::Excluded(end)) => {
+                self.get_value_byrange(on_classname, id, start.clone()..end.clone())
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(end)) => {
+                self.get_value_byrange_inclusive(on_classname, id, T::default()..=end.clone())
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(end)) => {
+                self.get_value_byrange(on_classname, id, T::default()..end.clone())
+            }
+            _ => T::default(),
+        }
+    }
+
     /// Calculates an interpolated value within a given `Range` based on an animation's progress.
     ///
     /// # Example
     /// ```ignore
     /// let x_pos = krama.get_value_byrange("move", 1, 0.0..500.0);
     /// ```
-    pub fn get_value_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
+    pub fn get_value_byrange<T>(&self, classname: &'static str, id: UN, range: Range<T>) -> T
     where
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
     {
@@ -745,10 +835,10 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             }
         }
 
-        for (inclass, ukeylists) in &mut self.framelist.0 {
+        for (inclass, ukeylists) in &self.framelist.0 {
             if *inclass == classname {
-                for ukeylist in ukeylists.iter_mut() {
-                    for (inid, progresslist) in &mut *ukeylist.0 {
+                for ukeylist in ukeylists.iter() {
+                    for (inid, progresslist) in &*ukeylist.0 {
                         if *inid == id {
                             return progresslist.get_value_byrange(range, &keyframe);
                         }
@@ -767,7 +857,7 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
     /// let alpha = krama.get_value_byrange_inclusive("fade", 1, 0.0..=1.0);
     /// ```
     pub fn get_value_byrange_inclusive<T>(
-        &mut self,
+        &self,
         classname: &'static str,
         id: UN,
         range: RangeInclusive<T>,
@@ -785,10 +875,10 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             }
         }
 
-        for (inclass, ukeylists) in &mut self.framelist.0 {
+        for (inclass, ukeylists) in &self.framelist.0 {
             if *inclass == classname {
-                for ukeylist in ukeylists.iter_mut() {
-                    for (inid, progresslist) in &mut *ukeylist.0 {
+                for ukeylist in ukeylists.iter() {
+                    for (inid, progresslist) in &*ukeylist.0 {
                         if *inid == id {
                             return progresslist.get_value_byrangeinclusive(range, &keyframe);
                         }
@@ -800,13 +890,38 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
         range.start().clone()
     }
 
+    pub fn from_range_generic<T>(
+        &self,
+        on_classname: &'static str,
+        id: UN,
+        range: impl RangeBounds<T>,
+    ) -> T
+    where
+        T: Default + Clone + Copy,
+        crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
+    {
+        match (range.start_bound(), range.end_bound()) {
+            (core::ops::Bound::Included(start), core::ops::Bound::Included(end)) => self
+                .get_generic_value_by_rangeinclusive(on_classname, id, start.clone()..=end.clone()),
+            (core::ops::Bound::Included(start), core::ops::Bound::Excluded(end)) => {
+                self.get_generic_byrange(on_classname, id, start.clone()..end.clone())
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(end)) => self
+                .get_generic_value_by_rangeinclusive(on_classname, id, T::default()..=end.clone()),
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(end)) => {
+                self.get_generic_byrange(on_classname, id, T::default()..end.clone())
+            }
+            _ => T::default(),
+        }
+    }
+
     /// Gets an interpolated value for generic types using the `GetValueByGeneric` trait.
     ///
     /// # Example
     /// ```ignore
     /// let color = krama.get_generic_byrange("recolor", 1, RED..BLUE);
     /// ```
-    pub fn get_generic_byrange<T>(&mut self, classname: &'static str, id: UN, range: Range<T>) -> T
+    pub fn get_generic_byrange<T>(&self, classname: &'static str, id: UN, range: Range<T>) -> T
     where
         T: Copy,
         crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
@@ -820,10 +935,10 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             }
         }
 
-        for (inclass, ukeylists) in &mut self.framelist.0 {
+        for (inclass, ukeylists) in &self.framelist.0 {
             if *inclass == classname {
-                for ukeylist in ukeylists.iter_mut() {
-                    for (inid, progresslist) in &mut *ukeylist.0 {
+                for ukeylist in ukeylists.iter() {
+                    for (inid, progresslist) in &*ukeylist.0 {
                         if *inid == id {
                             return progresslist.get_generic_byrange(range, &keyframe);
                         }
@@ -842,7 +957,7 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
     /// let pos = krama.get_generic_value_by_rangeinclusive("path", 1, start..=end);
     /// ```
     pub fn get_generic_value_by_rangeinclusive<T>(
-        &mut self,
+        &self,
         classname: &'static str,
         id: UN,
         range: RangeInclusive<T>,
@@ -860,10 +975,10 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             }
         }
 
-        for (inclass, ukeylists) in &mut self.framelist.0 {
+        for (inclass, ukeylists) in &self.framelist.0 {
             if *inclass == classname {
-                for ukeylist in ukeylists.iter_mut() {
-                    for (inid, progresslist) in &mut *ukeylist.0 {
+                for ukeylist in ukeylists.iter() {
+                    for (inid, progresslist) in &*ukeylist.0 {
                         if *inid == id {
                             return progresslist.get_generic_byrangeinclusive(range, &keyframe);
                         }
