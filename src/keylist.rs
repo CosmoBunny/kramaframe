@@ -13,20 +13,18 @@ use crate::keyframe::KeyFrameFunction;
 macro_rules! interpolate_range_common {
     // simple Range<T>
     ($self_val:expr, $range_val:expr, $t_val:expr) => {{
-        let range_length = $range_val.end - $range_val.start;
         if $self_val.is_reverse() {
-            $range_val.end - range_length * $t_val
+            $range_val.end - ($range_val.end - $range_val.start) * $t_val
         } else {
-            $range_val.start + range_length * $t_val
+            $range_val.start + ($range_val.end - $range_val.start) * $t_val
         }
     }};
     // simple RangeInclusive<T>
     ($self_val:expr, =, $range_val:expr, $t_val:expr) => {{
-        let range_length = *($range_val.end()) - *($range_val.start());
         if $self_val.is_reverse() {
-            *$range_val.end() - range_length * $t_val
+            *$range_val.end() - (*$range_val.end() - *$range_val.start()) * $t_val
         } else {
-            *$range_val.start() + range_length * $t_val
+            *$range_val.start() + (*$range_val.end() - *$range_val.start()) * $t_val
         }
     }};
     // for u8, u16, u32, u64, u128, i8, i16, i32, i64, i128
@@ -519,11 +517,20 @@ macro_rules! impl_get_value_by_range {
             for ProgressList<TRES, PRES>
         {
             fn get_value_byrange(&self, range: Range<$t>, keyframe: &KeyFrameFunction) -> $t {
-                let range_length = range.end - range.start;
                 let progress = self.progress.to_f32();
                 match keyframe {
                     KeyFrameFunction::Linear => {
-                        range.start + ((range_length as f32) * progress.abs()) as $t
+                        let range_reverse = range.end < range.start;
+                        let range_length = if range_reverse {
+                            range.start - range.end
+                        } else {
+                            range.end - range.start
+                        };
+                        if range_reverse {
+                            range.start - ((range_length as f32) * progress.abs()) as $t
+                        } else {
+                            range.start + ((range_length as f32) * progress.abs()) as $t
+                        }
                     }
                     KeyFrameFunction::Ease => {
                         let x = self.progress_for_x(progress);
@@ -575,11 +582,20 @@ macro_rules! impl_get_value_by_range {
                 range: RangeInclusive<$t>,
                 keyframe: &KeyFrameFunction,
             ) -> $t {
-                let range_length = *range.end() - *range.start();
                 let progress = self.progress.to_f32();
                 match keyframe {
                     KeyFrameFunction::Linear => {
-                        *range.start() + ((range_length as f32) * progress.abs()) as $t
+                        let range_reverse = *range.end() < *range.start();
+                        let range_length = if range_reverse {
+                            *range.start() - *range.end()
+                        } else {
+                            *range.end() - *range.start()
+                        };
+                        if range_reverse {
+                            *range.start() - ((range_length as f32) * progress.abs()) as $t
+                        } else {
+                            *range.start() + ((range_length as f32) * progress.abs()) as $t
+                        }
                     }
                     KeyFrameFunction::Ease => {
                         let x = self.progress_for_x(progress);
