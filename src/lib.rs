@@ -9,9 +9,8 @@ pub use alloc::collections::BTreeMap;
 #[cfg(feature = "std")]
 pub use std::collections::BTreeMap;
 
+use core::ops::RangeBounds;
 use core::ops::{Range, RangeInclusive};
-#[cfg(any(feature = "std", feature = "alloc"))]
-use std::ops::RangeBounds;
 
 use crate::{
     keyframe::KeyFrameFunction,
@@ -245,16 +244,16 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         crate::keylist::ProgressList<TRES, PRES>: GetValueByRange<T>,
     {
         match (range.start_bound(), range.end_bound()) {
-            (std::ops::Bound::Included(start), std::ops::Bound::Included(end)) => {
+            (core::ops::Bound::Included(start), core::ops::Bound::Included(end)) => {
                 self.get_value_byrange_inclusive(on_classname, id, start.clone()..=end.clone())
             }
-            (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end)) => {
+            (core::ops::Bound::Included(start), core::ops::Bound::Excluded(end)) => {
                 self.get_value_byrange(on_classname, id, start.clone()..end.clone())
             }
-            (std::ops::Bound::Unbounded, std::ops::Bound::Included(end)) => {
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(end)) => {
                 self.get_value_byrange_inclusive(on_classname, id, T::default()..=end.clone())
             }
-            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(end)) => {
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(end)) => {
                 self.get_value_byrange(on_classname, id, T::default()..end.clone())
             }
             _ => T::default(),
@@ -329,14 +328,14 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         crate::keylist::ProgressList<TRES, PRES>: GetValueByGeneric<T>,
     {
         match (range.start_bound(), range.end_bound()) {
-            (std::ops::Bound::Included(start), std::ops::Bound::Included(end)) => self
+            (core::ops::Bound::Included(start), core::ops::Bound::Included(end)) => self
                 .get_generic_value_by_rangeinclusive(on_classname, id, start.clone()..=end.clone()),
-            (std::ops::Bound::Included(start), std::ops::Bound::Excluded(end)) => {
+            (core::ops::Bound::Included(start), core::ops::Bound::Excluded(end)) => {
                 self.get_generic_byrange(on_classname, id, start.clone()..end.clone())
             }
-            (std::ops::Bound::Unbounded, std::ops::Bound::Included(end)) => self
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(end)) => self
                 .get_generic_value_by_rangeinclusive(on_classname, id, T::default()..=end.clone()),
-            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(end)) => {
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(end)) => {
                 self.get_generic_byrange(on_classname, id, T::default()..end.clone())
             }
             _ => T::default(),
@@ -356,7 +355,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
 
      ## Example of implementation
      ```rust
-        use std::ops::{Add, Sub, Mul};
+        use core::ops::{Add, Sub, Mul};
         #[derive(Clone, Copy)]
         struct Point {
             x: f32,
@@ -426,7 +425,7 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
 
      ## Example of implementation
      ```rust
-        use std::ops::{Add, Sub, Mul};
+        use core::ops::{Add, Sub, Mul};
         #[derive(Clone, Copy)]
         struct Point {
             x: f32,
