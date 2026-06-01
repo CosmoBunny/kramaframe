@@ -167,6 +167,15 @@ impl<'a, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
             }
         }
     }
+
+    pub fn forward(&mut self, id: &UN) {
+        for (inid, progresslist) in self.0.iter_mut() {
+            if inid == id {
+                progresslist.forward();
+                break;
+            }
+        }
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -304,6 +313,9 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq> ProgressList
     }
     pub fn reverse(&mut self) {
         self.progress.reverse();
+    }
+    pub fn forward(&mut self) {
+        self.progress.forward();
     }
     pub fn reverse_start(&mut self) {
         self.progress = PRES::max();
@@ -786,6 +798,7 @@ if the progress value is maximum example 128 for i8. It means animation restart 
 pub trait ProgressResolution {
     fn absolute(&self) -> Self;
     fn reverse(&mut self);
+    fn forward(&mut self);
     /// restart means set progress at specific value that represents the start signal. AKA forward/start function.
     /// If restart is not called then it's value stay in 0 or MIN-1 after animation and wait for restart signal.
     /// progress will goes MIN-1 (replace to zero for animation) to MAX.
@@ -812,6 +825,9 @@ impl ProgressResolution for f32 {
     }
     fn reverse(&mut self) {
         *self = self.neg();
+    }
+    fn forward(&mut self) {
+        *self = self.abs();
     }
     fn start_signal(&self) -> bool {
         *self == -1.1
@@ -841,6 +857,11 @@ macro_rules! impl_progress_resolution {
             }
             fn reverse(&mut self) {
                 *self = -*self;
+            }
+            fn forward(&mut self) {
+                if self.is_reverse() {
+                    *self = -*self;
+                }
             }
             fn restart(&mut self) {
                 *self = <$t>::MIN;

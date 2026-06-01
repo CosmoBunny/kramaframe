@@ -509,6 +509,15 @@ impl<TRES: TimingResolution + Clone, PRES: ProgressResolution + Eq>
         }
     }
 
+    /// Sets the direction of a specific animation instance to forward.
+    pub fn forward_animate(&mut self, on_classname: &'static str, id: u32) {
+        if let Some(keylist) = self.framelist.get_mut(on_classname) {
+            if let Some(progresslist) = keylist.get_mut(id) {
+                progresslist.forward();
+            }
+        }
+    }
+
     /// Checks if a specific animation instance is currently playing.
     ///
     /// Returns `true` if the animation is playing, `false` otherwise.
@@ -1021,6 +1030,18 @@ impl<'a, const N: usize, UN: Eq, TRES: TimingResolution + Clone, PRES: ProgressR
             if *inclass == classname {
                 for ukeylist in ukeylists.iter_mut() {
                     ukeylist.reverse_start(&id);
+                }
+                break;
+            }
+        }
+    }
+
+    /// Sets the direction of a specific animation instance to forward.
+    pub fn forward_animate(&mut self, classname: &'static str, id: UN) {
+        for (inclass, ukeylists) in &mut self.framelist.0 {
+            if *inclass == classname {
+                for ukeylist in ukeylists.iter_mut() {
+                    ukeylist.forward(&id);
                 }
                 break;
             }
